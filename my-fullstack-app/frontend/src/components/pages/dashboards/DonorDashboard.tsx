@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Heart, Calendar, Award, TrendingUp, MapPin } from "lucide-react";
+import { toast } from "sonner";
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/components/contexts/AuthContext";
@@ -12,6 +13,7 @@ const DonorDashboard = () => {
   const { user } = useAuth();
   const [donationHistory, setDonationHistory] = useState([]);
   const [upcomingCamps, setUpcomingCamps] = useState([]);
+
   const [stats, setStats] = useState({
     totalDonations: 0,
     bloodType: user?.blood_type || "N/A", // Assuming user object has this
@@ -37,6 +39,8 @@ const DonorDashboard = () => {
         const camps = await campRes.json();
         setUpcomingCamps(camps);
 
+
+
         // Calculate Stats
         setStats(prev => ({
           ...prev,
@@ -51,6 +55,8 @@ const DonorDashboard = () => {
 
     fetchData();
   }, [user]);
+
+
 
   return (
     <DashboardLayout title="Donor Dashboard" role="Donor" roleColor="blood">
@@ -129,6 +135,9 @@ const DonorDashboard = () => {
           </div>
         </Button>
       </div>
+
+      {/* Pending Camp Approvals */}
+
 
       {/* Donation History */}
       <Card className="mb-8">

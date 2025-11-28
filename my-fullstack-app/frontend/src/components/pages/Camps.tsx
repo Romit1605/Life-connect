@@ -132,10 +132,12 @@ const Camps = () => {
   const handleRegister = async (campId: string, campName: string) => {
     setRegistering(campId);
     try {
-      // In a real app, you would have a registration endpoint
-      // For now, we'll just show success
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
-      toast.success(`Successfully registered for ${campName}! You'll receive a confirmation email.`);
+      const { error } = await campAPI.register(campId);
+      if (error) {
+        toast.error(error);
+      } else {
+        toast.success(`Successfully registered for ${campName}! Notifications sent to hospital and government.`);
+      }
     } catch (error: any) {
       toast.error(error.message || "Failed to register");
     } finally {

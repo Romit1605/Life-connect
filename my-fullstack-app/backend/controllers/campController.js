@@ -1,4 +1,6 @@
 const Camp = require("../models/Camp");
+const Notification = require("../models/Notification");
+const User = require("../models/User");
 
 // @desc    Get all camps
 // @route   GET /api/camps
@@ -65,7 +67,7 @@ const getCampById = async (req, res) => {
 // @route   POST /api/camps
 // @access  Private (Hospital/NGO/BloodBank)
 const createCamp = async (req, res) => {
-    const { name, date, location, description, contact_phone, coordinates } = req.body;
+    const { name, date, location, description, contact_phone, coordinates, resourceRequests, volunteersNeeded } = req.body;
 
     if (!name || !date || !location) {
         return res.status(400).json({ message: "Please add all required fields: name, date, and location" });
@@ -79,10 +81,53 @@ const createCamp = async (req, res) => {
             description,
             contact_phone,
             coordinates,
+            resourceRequests: resourceRequests || [],
+            volunteersNeeded: volunteersNeeded || 0,
             organizer: req.user.id,
         });
 
-        const populatedCamp = await Camp.findById(camp._id).populate("organizer", "full_name organization_name email");
+        // Send approval request to hospitals
+        const hospitals = await User.find({ role: "hospital" });
+        for (const hospital of hospitals) {
+            await Notification.create({
+                recipient: hospital._id,
+                type: "new_alert",
+                message: `New camp "${name}" scheduled by ${req.user.organization_name || req.user.full_name} requires your approval.`,
+                relatedId: camp._id,
+                relatedModel: "Camp",
+            });
+        }
+
+        // Send approval request to government
+        const government = await User.find({ role: "government" });
+        for (const gov of government) {
+            await Notification.create({
+                recipient: gov._id,
+                type: "new_alert",
+                message: `New camp "${name}" scheduled by ${req.user.organization_name || req.user.full_name} requires government approval.`,
+                relatedId: camp._id,
+                relatedModel: "Camp",
+            });
+        }
+
+        // Send resource requests to hospitals and pharmacies
+        if (resourceRequests && resourceRequests.length > 0) {
+            for (const request of resourceRequests) {
+                if (request.targetOrganization) {
+                    await Notification.create({
+                        recipient: request.targetOrganization,
+                        type: "new_request",
+                        message: `Resource request for camp "${name}": ${request.quantity} ${request.itemName}`,
+                        relatedId: camp._id,
+                        relatedModel: "Camp",
+                    });
+                }
+            }
+        }
+
+        const populatedCamp = await Camp.findById(camp._id)
+            .populate("organizer", "full_name organization_name email")
+            .populate("resourceRequests.targetOrganization", "full_name organization_name");
         res.status(201).json(populatedCamp);
     } catch (error) {
         console.error("Create camp error:", error);
@@ -153,10 +198,255 @@ const deleteCamp = async (req, res) => {
     }
 };
 
+// @desc    Approve a camp (Hospital)
+// @route   PUT /api/camps/:id/approve
+// @access  Private (Hospital only)
+const approveCamp = async (req, res) => {
+    try {
+        const camp = await Camp.findById(req.params.id);
+
+        if (!camp) {
+            return res.status(404).json({ message: "Camp not found" });
+        }
+
+        if (req.user.role !== "hospital") {
+            return res.status(403).json({ message: "Only hospitals can approve camps" });
+        }
+
+        if (camp.hospitalApproval.status === "approved") {
+            return res.status(400).json({ message: "Camp is already approved by hospital" });
+        }
+
+        camp.hospitalApproval.status = "approved";
+        camp.hospitalApproval.approvedBy = req.user.id;
+        camp.hospitalApproval.approvedAt = new Date();
+
+        // Check if both hospital and government have approved
+        if (camp.governmentApproval.status === "approved") {
+            camp.approvalStatus = "approved";
+
+            // Notify all users about the approved camp
+            const allUsers = await User.find({});
+            for (const user of allUsers) {
+                await Notification.create({
+                    recipient: user._id,
+                    type: "new_alert",
+                    message: `New camp "${camp.name}" has been approved and will take place on ${new Date(camp.date).toLocaleDateString()} at ${camp.location}.`,
+                    relatedId: camp._id,
+                    relatedModel: "Camp",
+                });
+            }
+        }
+
+        await camp.save();
+
+        // Notify NGO organizer
+        await Notification.create({
+            recipient: camp.organizer,
+            type: "request_update",
+            message: `Your camp "${camp.name}" has been approved by ${req.user.organization_name || req.user.full_name}.${camp.approvalStatus === "approved" ? " The camp is now fully approved!" : " Waiting for government approval."}`,
+            relatedId: camp._id,
+            relatedModel: "Camp",
+        });
+
+        const populatedCamp = await Camp.findById(camp._id)
+            .populate("organizer", "full_name organization_name email")
+            .populate("hospitalApproval.approvedBy", "full_name organization_name")
+            .populate("governmentApproval.approvedBy", "full_name organization_name");
+
+        res.status(200).json(populatedCamp);
+    } catch (error) {
+        console.error("Approve camp error:", error);
+        res.status(500).json({ message: "Error approving camp", error: error.message });
+    }
+};
+
+// @desc    Approve a camp (Government)
+// @route   PUT /api/camps/:id/approve-government
+// @access  Private (Government/Donor only)
+const approveGovernmentCamp = async (req, res) => {
+    try {
+        const camp = await Camp.findById(req.params.id);
+
+        if (!camp) {
+            return res.status(404).json({ message: "Camp not found" });
+        }
+
+        if (req.user.role !== "government") {
+            return res.status(403).json({ message: "Only government can approve camps" });
+        }
+
+        if (camp.governmentApproval.status === "approved") {
+            return res.status(400).json({ message: "Camp is already approved by government" });
+        }
+
+        camp.governmentApproval.status = "approved";
+        camp.governmentApproval.approvedBy = req.user.id;
+        camp.governmentApproval.approvedAt = new Date();
+
+        // Check if both hospital and government have approved
+        if (camp.hospitalApproval.status === "approved") {
+            camp.approvalStatus = "approved";
+
+            // Notify all users about the approved camp
+            const allUsers = await User.find({});
+            for (const user of allUsers) {
+                await Notification.create({
+                    recipient: user._id,
+                    type: "new_alert",
+                    message: `New camp "${camp.name}" has been approved and will take place on ${new Date(camp.date).toLocaleDateString()} at ${camp.location}.`,
+                    relatedId: camp._id,
+                    relatedModel: "Camp",
+                });
+            }
+        }
+
+        await camp.save();
+
+        // Notify NGO organizer
+        await Notification.create({
+            recipient: camp.organizer,
+            type: "request_update",
+            message: `Your camp "${camp.name}" has been approved by government.${camp.approvalStatus === "approved" ? " The camp is now fully approved!" : " Waiting for hospital approval."}`,
+            relatedId: camp._id,
+            relatedModel: "Camp",
+        });
+
+        const populatedCamp = await Camp.findById(camp._id)
+            .populate("organizer", "full_name organization_name email")
+            .populate("hospitalApproval.approvedBy", "full_name organization_name")
+            .populate("governmentApproval.approvedBy", "full_name organization_name");
+
+        res.status(200).json(populatedCamp);
+    } catch (error) {
+        console.error("Approve camp error:", error);
+        res.status(500).json({ message: "Error approving camp", error: error.message });
+    }
+};
+
+// @desc    Reject a camp
+// @route   PUT /api/camps/:id/reject
+// @access  Private (Hospital only)
+const rejectCamp = async (req, res) => {
+    try {
+        const { reason } = req.body;
+        const camp = await Camp.findById(req.params.id);
+
+        if (!camp) {
+            return res.status(404).json({ message: "Camp not found" });
+        }
+
+        if (req.user.role !== "hospital" && req.user.role !== "government") {
+            return res.status(403).json({ message: "Only hospitals and government can reject camps" });
+        }
+
+        if (req.user.role === "hospital") {
+            camp.hospitalApproval.status = "rejected";
+            camp.hospitalApproval.rejectionReason = reason;
+        } else if (req.user.role === "government") {
+            camp.governmentApproval.status = "rejected";
+            camp.governmentApproval.rejectionReason = reason;
+        }
+
+        camp.approvalStatus = "rejected";
+        camp.rejectionReason = reason || "No reason provided";
+        await camp.save();
+
+        // Notify NGO organizer
+        await Notification.create({
+            recipient: camp.organizer,
+            type: "request_update",
+            message: `Your camp "${camp.name}" has been rejected by ${req.user.organization_name || req.user.full_name}. Reason: ${camp.rejectionReason}`,
+            relatedId: camp._id,
+            relatedModel: "Camp",
+        });
+
+        const populatedCamp = await Camp.findById(camp._id)
+            .populate("organizer", "full_name organization_name email");
+
+        res.status(200).json(populatedCamp);
+    } catch (error) {
+        console.error("Reject camp error:", error);
+        res.status(500).json({ message: "Error rejecting camp", error: error.message });
+    }
+};
+
+// @desc    Register for a camp
+// @route   POST /api/camps/:id/register
+// @access  Private
+const registerForCamp = async (req, res) => {
+    try {
+        const camp = await Camp.findById(req.params.id).populate("organizer", "full_name organization_name");
+
+        if (!camp) {
+            return res.status(404).json({ message: "Camp not found" });
+        }
+
+        // Check if user already registered
+        const alreadyRegistered = camp.registrations.some(
+            (reg) => reg.user.toString() === req.user.id
+        );
+
+        if (alreadyRegistered) {
+            return res.status(400).json({ message: "You are already registered for this camp" });
+        }
+
+        // Add registration
+        camp.registrations.push({
+            user: req.user.id,
+            registeredAt: new Date(),
+        });
+
+        await camp.save();
+
+        // Notify hospitals
+        const hospitals = await User.find({ role: "hospital" });
+        for (const hospital of hospitals) {
+            await Notification.create({
+                recipient: hospital._id,
+                type: "new_alert",
+                message: `${req.user.full_name} has registered for camp "${camp.name}" organized by ${camp.organizer.organization_name || camp.organizer.full_name}.`,
+                relatedId: camp._id,
+                relatedModel: "Camp",
+            });
+        }
+
+        // Notify government
+        const government = await User.find({ role: "government" });
+        for (const gov of government) {
+            await Notification.create({
+                recipient: gov._id,
+                type: "new_alert",
+                message: `${req.user.full_name} has registered for camp "${camp.name}" organized by ${camp.organizer.organization_name || camp.organizer.full_name}.`,
+                relatedId: camp._id,
+                relatedModel: "Camp",
+            });
+        }
+
+        // Notify NGO organizer
+        await Notification.create({
+            recipient: camp.organizer._id,
+            type: "new_alert",
+            message: `${req.user.full_name} has registered for your camp "${camp.name}".`,
+            relatedId: camp._id,
+            relatedModel: "Camp",
+        });
+
+        res.status(200).json({ message: "Successfully registered for camp", camp });
+    } catch (error) {
+        console.error("Register for camp error:", error);
+        res.status(500).json({ message: "Error registering for camp", error: error.message });
+    }
+};
+
 module.exports = {
     getCamps,
     getCampById,
     createCamp,
     updateCamp,
     deleteCamp,
+    approveCamp,
+    approveGovernmentCamp,
+    rejectCamp,
+    registerForCamp,
 };

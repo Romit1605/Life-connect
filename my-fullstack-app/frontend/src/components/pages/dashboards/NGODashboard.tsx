@@ -9,8 +9,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Users, Calendar, Package, TrendingUp, Droplet, AlertTriangle, Loader2, CheckCircle, XCircle } from "lucide-react";
 import { useState, useEffect } from "react";
-import { alertAPI } from "@/services/api";
+import { alertAPI, campAPI, requestAPI } from "@/services/api";
 import { toast } from "sonner";
+import { useAuth } from "@/components/contexts/AuthContext";
 
 const NGODashboard = () => {
   const [alerts, setAlerts] = useState<Alert[]>([]);
@@ -26,26 +27,47 @@ const NGODashboard = () => {
     { id: 3, name: "Blood Donation Drive", date: "2024-02-25", volunteers: 20, status: "Planning", beneficiaries: 150 }
   ];
 
-  const stockRequests = [
-    { id: 1, item: "Paracetamol (500 tablets)", pharmacy: "City Pharmacy", status: "Approved", expiry: "30 days" },
-    { id: 2, item: "Antibiotics (200 bottles)", pharmacy: "MedStore", status: "Pending", expiry: "45 days" }
-  ];
+  const [myCamps, setMyCamps] = useState<any[]>([]);
+  const [myRequests, setMyRequests] = useState<any[]>([]);
+
+  const { user } = useAuth();
 
   useEffect(() => {
     fetchAlerts();
-  }, []);
+  }, [user]);
 
   const fetchAlerts = async () => {
+    if (!user) return;
+
     setLoading(true);
     try {
-      const { data, error } = await alertAPI.getAll();
-      if (error) {
-        toast.error("Failed to fetch alerts");
-      } else {
-        setAlerts(data || []);
+      // Fetch alerts (all statuses, not just pending)
+      const { data: alertsData, error: alertsError } = await alertAPI.getAll();
+      if (!alertsError) {
+        setAlerts(alertsData || []);
+      }
+
+      // Fetch my camps
+      const { data: campsData, error: campsError } = await campAPI.getAll();
+      if (!campsError) {
+        const myOwnCamps = ((campsData as any[]) || []).filter((camp: any) => {
+          const organizerId = typeof camp.organizer === 'object' ? camp.organizer._id : camp.organizer;
+          return organizerId === user._id || organizerId?.toString() === user._id?.toString();
+        });
+        setMyCamps(myOwnCamps);
+      }
+
+      // Fetch my requests
+      const { data: requestsData, error: requestsError } = await requestAPI.getAll();
+      if (!requestsError) {
+        const myOwnRequests = ((requestsData as any[]) || []).filter((req: any) => {
+          const requesterId = typeof req.requester === 'object' ? req.requester._id : req.requester;
+          return requesterId === user._id;
+        });
+        setMyRequests(myOwnRequests);
       }
     } catch (error: any) {
-      toast.error(error.message || "Failed to fetch alerts");
+      toast.error(error.message || "Failed to fetch data"); // Changed message to be more general
     } finally {
       setLoading(false);
     }
@@ -126,7 +148,7 @@ const NGODashboard = () => {
           <CardContent>
             <div className="flex items-center gap-2">
               <Package className="h-5 w-5 text-medicine" />
-              <span className="text-3xl font-bold">12</span>
+              <span className="text-3xl font-bold">{myRequests.length}</span>
             </div>
           </CardContent>
         </Card>
@@ -221,40 +243,63 @@ const NGODashboard = () => {
         </Card>
       )}
 
-      {/* Medical Camps */}
+      {/* My Camps */}
       <Card className="mb-8">
         <CardHeader>
-          <CardTitle>Medical Camps</CardTitle>
-          <CardDescription>Scheduled and upcoming camps</CardDescription>
+          <CardTitle>My Camps</CardTitle>
+          <CardDescription>Your scheduled camps and their approval status</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {camps.map((camp) => (
-              <div key={camp.id} className="flex items-center justify-between p-4 rounded-lg border border-border/50">
-                <div className="flex items-center gap-4">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-ngo/10">
-                    <Calendar className="h-6 w-6 text-ngo" />
+          {myCamps.length === 0 ? (
+            <p className="text-center text-muted-foreground py-8">No camps created yet. Click "Schedule New Camp" to create one.</p>
+          ) : (
+            <div className="space-y-4">
+              {myCamps.map((camp) => (
+                <div key={camp._id} className="flex items-center justify-between p-4 rounded-lg border border-border/50">
+                  <div className="flex items-center gap-4 flex-1">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-ngo/10">
+                      <Calendar className="h-6 w-6 text-ngo" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-semibold">{camp.name}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {new Date(camp.date).toLocaleDateString()} • {camp.location}
+                      </p>
+                      <div className="flex items-center gap-2 mt-2">
+                        {camp.hospitalApproval?.status === "approved" ? (
+                          <Badge className="bg-ngo text-ngo-foreground">Hospital ✓</Badge>
+                        ) : camp.hospitalApproval?.status === "rejected" ? (
+                          <Badge variant="destructive">Hospital ✗</Badge>
+                        ) : (
+                          <Badge variant="secondary">Hospital Pending</Badge>
+                        )}
+                        {camp.governmentApproval?.status === "approved" ? (
+                          <Badge className="bg-ngo text-ngo-foreground">Government ✓</Badge>
+                        ) : camp.governmentApproval?.status === "rejected" ? (
+                          <Badge variant="destructive">Government ✗</Badge>
+                        ) : (
+                          <Badge variant="secondary">Government Pending</Badge>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-semibold">{camp.name}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {new Date(camp.date).toLocaleDateString()} • {camp.volunteers} volunteers • {camp.beneficiaries} expected
-                    </p>
+                  <div className="flex items-center gap-2">
+                    <Badge className={
+                      camp.approvalStatus === "approved" ? "bg-ngo text-ngo-foreground" :
+                        camp.approvalStatus === "rejected" ? "bg-alertRed/20 text-alertRed" :
+                          "bg-alertYellow text-foreground"
+                    }>
+                      {camp.approvalStatus === "approved" ? "Fully Approved" :
+                        camp.approvalStatus === "rejected" ? "Rejected" : "Pending Approval"}
+                    </Badge>
+                    {camp.registrations && camp.registrations.length > 0 && (
+                      <Badge variant="outline">{camp.registrations.length} Registered</Badge>
+                    )}
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Badge className={
-                    camp.status === "Approved" ? "bg-ngo text-ngo-foreground" :
-                      camp.status === "Pending" ? "bg-alertYellow text-foreground" :
-                        "bg-secondary text-secondary-foreground"
-                  }>
-                    {camp.status}
-                  </Badge>
-                  <Button variant="outline" size="sm">Manage</Button>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -266,29 +311,34 @@ const NGODashboard = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {stockRequests.map((request) => (
-              <div key={request.id} className="flex items-center justify-between p-4 rounded-lg border border-border/50">
-                <div className="flex items-center gap-4">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-medicine/10">
-                    <Package className="h-6 w-6 text-medicine" />
+            {myRequests.length === 0 ? (
+              <p className="text-center text-muted-foreground py-4">No stock requests found.</p>
+            ) : (
+              myRequests.map((request) => (
+                <div key={request._id} className="flex items-center justify-between p-4 rounded-lg border border-border/50">
+                  <div className="flex items-center gap-4">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-medicine/10">
+                      <Package className="h-6 w-6 text-medicine" />
+                    </div>
+                    <div>
+                      <p className="font-semibold">{request.item_name} ({request.quantity})</p>
+                      <p className="text-sm text-muted-foreground">
+                        {new Date(request.createdAt).toLocaleDateString()} • {request.urgency} urgency
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-semibold">{request.item}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {request.pharmacy} • Expires in {request.expiry}
-                    </p>
+                  <div className="flex items-center gap-2">
+                    <Badge className={
+                      request.status === "fulfilled" ? "bg-ngo text-ngo-foreground" :
+                        request.status === "cancelled" ? "bg-alertRed/20 text-alertRed" :
+                          "bg-alertYellow text-foreground"
+                    }>
+                      {request.status}
+                    </Badge>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Badge className={
-                    request.status === "Approved" ? "bg-ngo text-ngo-foreground" :
-                      "bg-alertYellow text-foreground"
-                  }>
-                    {request.status}
-                  </Badge>
-                </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </CardContent>
       </Card>

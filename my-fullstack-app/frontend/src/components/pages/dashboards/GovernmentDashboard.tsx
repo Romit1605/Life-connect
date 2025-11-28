@@ -10,10 +10,10 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Shield, TrendingUp, AlertTriangle, CheckCircle, FileText, Users, Droplet, Calendar, Loader2 } from "lucide-react";
+import { Shield, TrendingUp, AlertTriangle, CheckCircle, FileText, Users, Droplet, Calendar, Loader2, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { useState, useEffect } from "react";
-import { alertAPI } from "@/services/api";
+import { alertAPI, campAPI } from "@/services/api";
 import { Alert } from "@/types";
 
 const GovernmentDashboard = () => {
@@ -22,11 +22,9 @@ const GovernmentDashboard = () => {
   const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null);
   const [isAlertModalOpen, setIsAlertModalOpen] = useState(false);
 
-  const pendingApprovals = [
-    { id: 1, type: "Camp", title: "Community Health Camp - Downtown", requester: "HealthCare NGO", date: "2024-02-15", details: "Budget: $50,000, Expected: 500 people" },
-    { id: 2, type: "Budget", title: "Medical Equipment Allocation", requester: "City Hospital", date: "2024-02-18", details: "Amount: $75,000" },
-    { id: 3, type: "Camp", title: "Blood Donation Drive", requester: "Red Cross", date: "2024-02-20", details: "Budget: $30,000, Expected: 200 people" }
-  ];
+  const [pendingCamps, setPendingCamps] = useState<any[]>([]);
+  const [approvingCamp, setApprovingCamp] = useState<string | null>(null);
+  const [rejectingCamp, setRejectingCamp] = useState<string | null>(null);
 
   const analytics = {
     totalBloodUnits: "15,420",
@@ -37,7 +35,20 @@ const GovernmentDashboard = () => {
 
   useEffect(() => {
     fetchAlerts();
+    fetchPendingCamps();
   }, []);
+
+  const fetchPendingCamps = async () => {
+    try {
+      const { data: campsData, error: campsError } = await campAPI.getAll();
+      if (!campsError) {
+        const pending = ((campsData as any[]) || []).filter((camp: any) => camp.governmentApproval?.status === "pending");
+        setPendingCamps(pending);
+      }
+    } catch (error) {
+      console.error("Failed to fetch camps:", error);
+    }
+  };
 
   const fetchAlerts = async () => {
     setLoading(true);
@@ -53,12 +64,41 @@ const GovernmentDashboard = () => {
     }
   };
 
-  const handleApprove = (id: number, title: string) => {
-    toast.success(`Approved: ${title}`);
+  const handleApprove = async (campId: string, campName: string) => {
+    setApprovingCamp(campId);
+    try {
+      const { error } = await campAPI.approveGovernment(campId);
+      if (error) {
+        toast.error(error);
+      } else {
+        toast.success(`Camp "${campName}" approved by government!`);
+        fetchPendingCamps();
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Failed to approve camp");
+    } finally {
+      setApprovingCamp(null);
+    }
   };
 
-  const handleReject = (id: number, title: string) => {
-    toast.error(`Rejected: ${title}`);
+  const handleReject = async (campId: string, campName: string) => {
+    const reason = prompt("Please provide a reason for rejection:");
+    if (!reason) return;
+
+    setRejectingCamp(campId);
+    try {
+      const { error } = await campAPI.reject(campId, reason);
+      if (error) {
+        toast.error(error);
+      } else {
+        toast.success(`Camp "${campName}" rejected.`);
+        fetchPendingCamps();
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Failed to reject camp");
+    } finally {
+      setRejectingCamp(null);
+    }
   };
 
   const handleViewAlert = (alert: Alert) => {
@@ -225,97 +265,73 @@ const GovernmentDashboard = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {pendingApprovals.map((approval) => (
-              <div key={approval.id} className="p-4 rounded-lg border border-border/50">
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-start gap-4">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-government/10">
-                      {approval.type === "Camp" ? (
+            {pendingCamps.length === 0 ? (
+              <p className="text-center text-muted-foreground py-4">No pending camp approvals.</p>
+            ) : (
+              pendingCamps.map((camp) => (
+                <div key={camp._id} className="p-4 rounded-lg border border-border/50">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-start gap-4">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-government/10">
                         <Users className="h-6 w-6 text-government" />
-                      ) : (
-                        <FileText className="h-6 w-6 text-government" />
-                      )}
-                    </div>
-                    <div>
-                      <p className="font-semibold mb-1">{approval.title}</p>
-                      <p className="text-sm text-muted-foreground mb-1">
-                        Requested by: {approval.requester}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        Date: {new Date(approval.date).toLocaleDateString()}
-                      </p>
-                    </div>
-                  </div>
-                  <Badge>{approval.type}</Badge>
-                </div>
-
-                <p className="text-sm text-muted-foreground mb-4 pl-16">
-                  {approval.details}
-                </p>
-
-                <div className="flex items-center gap-2 pl-16">
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button variant="outline" size="sm">
-                        View Details
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>{approval.title}</DialogTitle>
-                        <DialogDescription>Complete request information</DialogDescription>
-                      </DialogHeader>
-                      <div className="space-y-4">
-                        <div>
-                          <h4 className="font-semibold mb-2">Requester</h4>
-                          <p className="text-sm text-muted-foreground">{approval.requester}</p>
-                        </div>
-                        <div>
-                          <h4 className="font-semibold mb-2">Request Type</h4>
-                          <Badge>{approval.type}</Badge>
-                        </div>
-                        <div>
-                          <h4 className="font-semibold mb-2">Details</h4>
-                          <p className="text-sm text-muted-foreground">{approval.details}</p>
-                        </div>
-                        <div className="flex gap-2 pt-4">
-                          <Button
-                            className="flex-1 bg-ngo hover:bg-ngo/90"
-                            onClick={() => handleApprove(approval.id, approval.title)}
-                          >
-                            <CheckCircle className="mr-2 h-4 w-4" />
-                            Approve
-                          </Button>
-                          <Button
-                            variant="destructive"
-                            className="flex-1"
-                            onClick={() => handleReject(approval.id, approval.title)}
-                          >
-                            Reject
-                          </Button>
-                        </div>
                       </div>
-                    </DialogContent>
-                  </Dialog>
+                      <div>
+                        <p className="font-semibold mb-1">{camp.name}</p>
+                        <p className="text-sm text-muted-foreground mb-1">
+                          Organized by: {typeof camp.organizer === 'object' ? (camp.organizer.organization_name || camp.organizer.full_name) : 'NGO'}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          Date: {new Date(camp.date).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                    <Badge variant="outline">Camp</Badge>
+                  </div>
 
-                  <Button
-                    size="sm"
-                    className="bg-ngo hover:bg-ngo/90"
-                    onClick={() => handleApprove(approval.id, approval.title)}
-                  >
-                    <CheckCircle className="mr-2 h-4 w-4" />
-                    Approve
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="destructive"
-                    onClick={() => handleReject(approval.id, approval.title)}
-                  >
-                    Reject
-                  </Button>
+                  <p className="text-sm text-muted-foreground mb-4 pl-16">
+                    Location: {camp.location} • Volunteers Needed: {camp.volunteersNeeded}
+                    {camp.hospitalApproval?.status === "approved" && (
+                      <span className="ml-2 inline-flex items-center text-ngo font-medium">
+                        <CheckCircle className="w-3 h-3 mr-1" /> Hospital Approved
+                      </span>
+                    )}
+                  </p>
+
+                  <div className="flex items-center gap-2 pl-16">
+                    <Button
+                      size="sm"
+                      className="bg-ngo hover:bg-ngo/90"
+                      onClick={() => handleApprove(camp._id, camp.name)}
+                      disabled={approvingCamp === camp._id || rejectingCamp === camp._id}
+                    >
+                      {approvingCamp === camp._id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <>
+                          <CheckCircle className="mr-2 h-4 w-4" />
+                          Approve
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => handleReject(camp._id, camp.name)}
+                      disabled={approvingCamp === camp._id || rejectingCamp === camp._id}
+                    >
+                      {rejectingCamp === camp._id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <>
+                          <XCircle className="mr-2 h-4 w-4" />
+                          Reject
+                        </>
+                      )}
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </CardContent>
       </Card>

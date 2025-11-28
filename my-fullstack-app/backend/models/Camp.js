@@ -42,6 +42,81 @@ const campSchema = mongoose.Schema(
             enum: ["upcoming", "completed", "cancelled"],
             default: "upcoming",
         },
+        approvalStatus: {
+            type: String,
+            enum: ["pending", "approved", "rejected"],
+            default: "pending",
+        },
+        hospitalApproval: {
+            status: {
+                type: String,
+                enum: ["pending", "approved", "rejected"],
+                default: "pending",
+            },
+            approvedBy: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: "User",
+            },
+            approvedAt: Date,
+            rejectionReason: String,
+        },
+        governmentApproval: {
+            status: {
+                type: String,
+                enum: ["pending", "approved", "rejected"],
+                default: "pending",
+            },
+            approvedBy: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: "User",
+            },
+            approvedAt: Date,
+            rejectionReason: String,
+        },
+        approvedBy: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+        },
+        rejectionReason: {
+            type: String,
+            trim: true,
+        },
+        resourceRequests: [
+            {
+                requestType: {
+                    type: String,
+                    enum: ["blood", "medicine", "equipment"],
+                },
+                itemName: String,
+                quantity: Number,
+                targetOrganization: {
+                    type: mongoose.Schema.Types.ObjectId,
+                    ref: "User",
+                },
+                status: {
+                    type: String,
+                    enum: ["pending", "approved", "rejected"],
+                    default: "pending",
+                },
+            }
+        ],
+        volunteersNeeded: {
+            type: Number,
+            default: 0,
+        },
+        registrations: [
+            {
+                user: {
+                    type: mongoose.Schema.Types.ObjectId,
+                    ref: "User",
+                    required: true,
+                },
+                registeredAt: {
+                    type: Date,
+                    default: Date.now,
+                },
+            }
+        ],
         coordinates: {
             lat: {
                 type: Number,

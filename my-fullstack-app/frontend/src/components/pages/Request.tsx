@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowLeft, Send } from "lucide-react";
 import { toast } from "sonner";
 import Header from "@/components/Header";
-import { requestAPI } from "@/services/api";
+import { requestAPI, campAPI } from "@/services/api";
 import { useAuth } from "@/components/contexts/AuthContext";
 
 const Request = () => {
@@ -54,37 +54,55 @@ const Request = () => {
     setLoading(true);
 
     try {
-      let requestData: any = {
-        type: type === "camp" ? "blood" : type, // Camp requests are treated as blood type
-        location: formData.location,
-        notes: formData.reason
-      };
+      if (type === "camp") {
+        // Create a camp using campAPI
+        const campData = {
+          name: formData.campName,
+          date: formData.campDate,
+          location: formData.location,
+          description: formData.reason,
+          contact_phone: formData.contact,
+          volunteersNeeded: parseInt(formData.expectedAttendees) || 0,
+        };
 
-      if (type === "blood") {
-        requestData.item_name = formData.bloodType;
-        requestData.quantity = parseInt(formData.unitsNeeded);
-        requestData.urgency = formData.urgency;
-      } else if (type === "medicine") {
-        requestData.item_name = formData.medicineName;
-        requestData.quantity = parseInt(formData.quantity);
-        requestData.urgency = formData.priority;
-      } else if (type === "camp") {
-        // For camp requests, we'll store camp details in notes
-        requestData.item_name = formData.campName;
-        requestData.quantity = parseInt(formData.expectedAttendees) || 1;
-        requestData.urgency = "medium";
-        requestData.notes = `Camp: ${formData.campName}\nDate: ${formData.campDate}\nLocation: ${formData.location}\nExpected Attendees: ${formData.expectedAttendees}\nBudget: ${formData.budget}\nResources: ${formData.resources}\nReason: ${formData.reason}`;
-      }
+        const { data, error } = await campAPI.create(campData);
 
-      const { data, error } = await requestAPI.create(requestData);
-
-      if (error) {
-        toast.error(error);
+        if (error) {
+          toast.error(error);
+        } else {
+          toast.success("Camp created successfully! Approval requests sent to Hospital and Government.");
+          setTimeout(() => {
+            navigate(-1);
+          }, 1500);
+        }
       } else {
-        toast.success("Request submitted successfully!");
-        setTimeout(() => {
-          navigate(-1);
-        }, 1500);
+        // Create a request for blood or medicine
+        let requestData: any = {
+          type: type,
+          location: formData.location,
+          notes: formData.reason
+        };
+
+        if (type === "blood") {
+          requestData.item_name = formData.bloodType;
+          requestData.quantity = parseInt(formData.unitsNeeded);
+          requestData.urgency = formData.urgency;
+        } else if (type === "medicine") {
+          requestData.item_name = formData.medicineName;
+          requestData.quantity = parseInt(formData.quantity);
+          requestData.urgency = formData.priority;
+        }
+
+        const { data, error } = await requestAPI.create(requestData);
+
+        if (error) {
+          toast.error(error);
+        } else {
+          toast.success("Request submitted successfully!");
+          setTimeout(() => {
+            navigate(-1);
+          }, 1500);
+        }
       }
     } catch (error: any) {
       toast.error(error.message || "Failed to submit request");

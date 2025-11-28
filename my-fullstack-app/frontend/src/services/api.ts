@@ -88,6 +88,27 @@ export const campAPI = {
         apiCall(API_ENDPOINTS.CAMPS.BY_ID(id), {
             method: 'DELETE',
         }),
+
+    approve: (id: string) =>
+        apiCall(`${API_ENDPOINTS.CAMPS.BY_ID(id)}/approve`, {
+            method: 'PUT',
+        }),
+
+    approveGovernment: (id: string) =>
+        apiCall(`${API_ENDPOINTS.CAMPS.BY_ID(id)}/approve-government`, {
+            method: 'PUT',
+        }),
+
+    reject: (id: string, reason?: string) =>
+        apiCall(`${API_ENDPOINTS.CAMPS.BY_ID(id)}/reject`, {
+            method: 'PUT',
+            body: JSON.stringify({ reason }),
+        }),
+
+    register: (id: string) =>
+        apiCall(`${API_ENDPOINTS.CAMPS.BY_ID(id)}/register`, {
+            method: 'POST',
+        }),
 };
 
 // Donation API

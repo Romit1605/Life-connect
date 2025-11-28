@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Droplet, Pill, Activity, AlertTriangle, Loader2, Calendar, CheckCircle, XCircle } from "lucide-react";
 import { useState, useEffect } from "react";
-import { requestAPI, alertAPI } from "@/services/api";
+import { requestAPI, alertAPI, campAPI } from "@/services/api";
 import { useAuth } from "@/components/contexts/AuthContext";
 import { toast } from "sonner";
 
@@ -22,6 +22,9 @@ const HospitalDashboard = () => {
   const [isAlertModalOpen, setIsAlertModalOpen] = useState(false);
   const [responding, setResponding] = useState(false);
   const [responseMessage, setResponseMessage] = useState("");
+  const [camps, setCamps] = useState<any[]>([]);
+  const [approvingCamp, setApprovingCamp] = useState<string | null>(null);
+  const [rejectingCamp, setRejectingCamp] = useState<string | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -49,10 +52,54 @@ const HospitalDashboard = () => {
       if (!alertsError) {
         setAlerts(alertsData || []);
       }
+
+      // Fetch pending camps
+      const { data: campsData, error: campsError } = await campAPI.getAll();
+      if (!campsError) {
+        const pendingCamps = ((campsData as any[]) || []).filter((camp: any) => camp.hospitalApproval?.status === "pending");
+        setCamps(pendingCamps);
+      }
     } catch (error: any) {
       toast.error(error.message || "Failed to fetch data");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleApproveCamp = async (campId: string, campName: string) => {
+    setApprovingCamp(campId);
+    try {
+      const { error } = await campAPI.approve(campId);
+      if (error) {
+        toast.error(error);
+      } else {
+        toast.success(`Camp "${campName}" approved!`);
+        fetchData();
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Failed to approve camp");
+    } finally {
+      setApprovingCamp(null);
+    }
+  };
+
+  const handleRejectCamp = async (campId: string, campName: string) => {
+    const reason = prompt("Please provide a reason for rejection:");
+    if (!reason) return;
+
+    setRejectingCamp(campId);
+    try {
+      const { error } = await campAPI.reject(campId, reason);
+      if (error) {
+        toast.error(error);
+      } else {
+        toast.success(`Camp "${campName}" rejected.`);
+        fetchData();
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Failed to reject camp");
+    } finally {
+      setRejectingCamp(null);
     }
   };
 
@@ -186,6 +233,82 @@ const HospitalDashboard = () => {
           </Link>
         </Button>
       </div>
+
+      {/* Pending Camp Approvals */}
+      {camps.length > 0 && (
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle>Pending Camp Approvals</CardTitle>
+            <CardDescription>NGO camps awaiting your approval</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {camps.map((camp) => (
+                <div key={camp._id} className="p-4 rounded-lg border border-border/50">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-4 flex-1">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-ngo/10">
+                        <Calendar className="h-6 w-6 text-ngo" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-semibold text-lg">{camp.name}</p>
+                        <p className="text-sm text-muted-foreground">
+                          Organized by {typeof camp.organizer === 'object' ? (camp.organizer.organization_name || camp.organizer.full_name) : 'NGO'}
+                        </p>
+                        <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                          <div className="flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            {new Date(camp.date).toLocaleDateString()}
+                          </div>
+                          <div>📍 {camp.location}</div>
+                          {camp.volunteersNeeded > 0 && (
+                            <div>👥 {camp.volunteersNeeded} volunteers needed</div>
+                          )}
+                        </div>
+                        {camp.description && (
+                          <p className="text-sm text-muted-foreground mt-2">{camp.description}</p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleRejectCamp(camp._id, camp.name)}
+                        disabled={rejectingCamp === camp._id || approvingCamp === camp._id}
+                      >
+                        {rejectingCamp === camp._id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <>
+                            <XCircle className="mr-2 h-4 w-4" />
+                            Reject
+                          </>
+                        )}
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="bg-ngo hover:bg-ngo/90"
+                        onClick={() => handleApproveCamp(camp._id, camp.name)}
+                        disabled={approvingCamp === camp._id || rejectingCamp === camp._id}
+                      >
+                        {approvingCamp === camp._id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <>
+                            <CheckCircle className="mr-2 h-4 w-4" />
+                            Approve
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Blood Expiry Alerts */}
       {alerts.length > 0 && (
