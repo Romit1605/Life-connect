@@ -51,8 +51,16 @@ const NGODashboard = () => {
       const { data: campsData, error: campsError } = await campAPI.getAll();
       if (!campsError) {
         const myOwnCamps = ((campsData as any[]) || []).filter((camp: any) => {
+          if (!camp.organizer) return false;
           const organizerId = typeof camp.organizer === 'object' ? camp.organizer._id : camp.organizer;
-          return organizerId === user._id || organizerId?.toString() === user._id?.toString();
+
+
+
+
+          const orgIdStr = String(organizerId);
+          const userIdStr = String(user?._id);
+
+          return orgIdStr === userIdStr;
         });
         setMyCamps(myOwnCamps);
       }
@@ -61,8 +69,9 @@ const NGODashboard = () => {
       const { data: requestsData, error: requestsError } = await requestAPI.getAll();
       if (!requestsError) {
         const myOwnRequests = ((requestsData as any[]) || []).filter((req: any) => {
+          if (!req.requester) return false;
           const requesterId = typeof req.requester === 'object' ? req.requester._id : req.requester;
-          return requesterId === user._id;
+          return String(requesterId) === String(user._id);
         });
         setMyRequests(myOwnRequests);
       }

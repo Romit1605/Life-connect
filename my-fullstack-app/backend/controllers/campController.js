@@ -37,7 +37,11 @@ const getCamps = async (req, res) => {
             };
         }
 
-        const camps = await Camp.find(query).sort({ date: 1 }).populate("organizer", "full_name organization_name email");
+        const camps = await Camp.find(query)
+            .sort({ date: 1 })
+            .populate("organizer", "full_name organization_name email")
+            .populate("hospitalApproval.approvedBy", "full_name organization_name")
+            .populate("governmentApproval.approvedBy", "full_name organization_name");
         res.status(200).json(camps);
     } catch (error) {
         console.error("Get camps error:", error);
@@ -50,7 +54,10 @@ const getCamps = async (req, res) => {
 // @access  Public
 const getCampById = async (req, res) => {
     try {
-        const camp = await Camp.findById(req.params.id).populate("organizer", "full_name organization_name email phone");
+        const camp = await Camp.findById(req.params.id)
+            .populate("organizer", "full_name organization_name email phone")
+            .populate("hospitalApproval.approvedBy", "full_name organization_name")
+            .populate("governmentApproval.approvedBy", "full_name organization_name");
 
         if (!camp) {
             return res.status(404).json({ message: "Camp not found" });
@@ -244,7 +251,7 @@ const approveCamp = async (req, res) => {
         await Notification.create({
             recipient: camp.organizer,
             type: "request_update",
-            message: `Your camp "${camp.name}" has been approved by ${req.user.organization_name || req.user.full_name}.${camp.approvalStatus === "approved" ? " The camp is now fully approved!" : " Waiting for government approval."}`,
+            message: `Your camp "${camp.name}" has been approved by hospital.${camp.approvalStatus === "approved" ? " The camp is now fully approved!" : " Waiting for government approval."}`,
             relatedId: camp._id,
             relatedModel: "Camp",
         });
@@ -263,7 +270,7 @@ const approveCamp = async (req, res) => {
 
 // @desc    Approve a camp (Government)
 // @route   PUT /api/camps/:id/approve-government
-// @access  Private (Government/Donor only)
+// @access  Private (Government only)
 const approveGovernmentCamp = async (req, res) => {
     try {
         const camp = await Camp.findById(req.params.id);
@@ -326,7 +333,7 @@ const approveGovernmentCamp = async (req, res) => {
 
 // @desc    Reject a camp
 // @route   PUT /api/camps/:id/reject
-// @access  Private (Hospital only)
+// @access  Private (Hospital/Government)
 const rejectCamp = async (req, res) => {
     try {
         const { reason } = req.body;

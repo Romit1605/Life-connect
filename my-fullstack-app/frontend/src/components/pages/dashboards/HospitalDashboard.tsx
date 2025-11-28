@@ -264,6 +264,11 @@ const HospitalDashboard = () => {
                           {camp.volunteersNeeded > 0 && (
                             <div>👥 {camp.volunteersNeeded} volunteers needed</div>
                           )}
+                          {camp.governmentApproval?.status === "approved" && (
+                            <div className="flex items-center text-ngo font-medium ml-2">
+                              <CheckCircle className="w-3 h-3 mr-1" /> Government Approved
+                            </div>
+                          )}
                         </div>
                         {camp.description && (
                           <p className="text-sm text-muted-foreground mt-2">{camp.description}</p>
