@@ -11,15 +11,7 @@ import { useState, useEffect } from "react";
 import { policyAPI } from "@/services/api";
 import { toast } from "sonner";
 
-interface PolicyItem {
-    _id: string;
-    role: string;
-    sectionTitle: string;
-    sectionNumber: number;
-    policyItems: string[];
-    version: number;
-    lastUpdatedBy: any;
-}
+import { PolicyItem } from "@/types";
 
 const Rules = () => {
     const [policies, setPolicies] = useState<PolicyItem[]>([]);
@@ -36,7 +28,8 @@ const Rules = () => {
 
     // Get user from localStorage
     const user = JSON.parse(localStorage.getItem("user") || "{}");
-    const isGovernment = user?.user?.role === "government";
+    // Check both possible structures (flat object or nested user object)
+    const isGovernment = user?.role === "government" || user?.user?.role === "government";
 
     useEffect(() => {
         fetchPolicies();
@@ -54,7 +47,7 @@ const Rules = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }
 
     const handleAddPolicy = (role: string) => {
         setCurrentRole(role);
@@ -117,10 +110,17 @@ const Rules = () => {
     };
 
     const handleDeletePolicy = async (policyId: string, sectionTitle: string) => {
-        if (!confirm(`Are you sure you want to delete "${sectionTitle}"?`)) return;
+        const reason = prompt(`Please provide a reason for deleting "${sectionTitle}":`);
+
+        if (reason === null) return; // User cancelled
+
+        if (!reason.trim()) {
+            toast.error("Deletion reason is required");
+            return;
+        }
 
         try {
-            const { error } = await policyAPI.delete(policyId);
+            const { error } = await policyAPI.delete(policyId, reason);
             if (error) {
                 toast.error(error);
             } else {
@@ -219,10 +219,12 @@ const Rules = () => {
                                                 <CardTitle>{getRoleDisplayName(role)} Operations & Guidelines</CardTitle>
                                             </div>
                                             {isGovernment && (
-                                                <Button onClick={() => handleAddPolicy(role)} size="sm" className="bg-government hover:bg-government/90">
-                                                    <Plus className="h-4 w-4 mr-2" />
-                                                    Add New Policy
-                                                </Button>
+                                                <div className="flex gap-2">
+                                                    <Button onClick={() => handleAddPolicy(role)} size="sm" className="bg-government hover:bg-government/90">
+                                                        <Plus className="h-4 w-4 mr-2" />
+                                                        Add New Policy
+                                                    </Button>
+                                                </div>
                                             )}
                                         </div>
                                         <CardDescription>Guidelines for {getRoleDisplayName(role).toLowerCase()} operations</CardDescription>
@@ -359,6 +361,7 @@ const Rules = () => {
                             </Button>
                         </div>
                     </div>
+
                 </DialogContent>
             </Dialog>
         </DashboardLayout>

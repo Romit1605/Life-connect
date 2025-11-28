@@ -244,9 +244,11 @@ export const reportAPI = {
     },
 };
 
+
+
 export const policyAPI = {
-    getAll: () => apiCall(API_ENDPOINTS.POLICIES.BASE),
-    getByRole: (role: string) => apiCall(API_ENDPOINTS.POLICIES.BY_ROLE(role)),
+    getAll: () => apiCall<import('../types').PolicyItem[]>(API_ENDPOINTS.POLICIES.BASE),
+    getByRole: (role: string) => apiCall<import('../types').PolicyItem[]>(API_ENDPOINTS.POLICIES.BY_ROLE(role)),
     create: (policyData: any) => apiCall(API_ENDPOINTS.POLICIES.BASE, {
         method: 'POST',
         body: JSON.stringify(policyData),
@@ -255,7 +257,14 @@ export const policyAPI = {
         method: 'PUT',
         body: JSON.stringify(policyData),
     }),
-    delete: (id: string) => apiCall(API_ENDPOINTS.POLICIES.BY_ID(id), {
+    delete: (id: string, reason: string) => apiCall(API_ENDPOINTS.POLICIES.BY_ID(id), {
         method: 'DELETE',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ reason }),
+    }),
+    seed: () => apiCall(API_ENDPOINTS.POLICIES.SEED, {
+        method: 'POST',
     }),
 };

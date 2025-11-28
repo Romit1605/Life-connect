@@ -6,6 +6,7 @@ const {
     createPolicy,
     updatePolicy,
     deletePolicy,
+    seedPolicies,
 } = require("../controllers/policyController");
 const { protect } = require("../middleware/authMiddleware");
 
@@ -13,6 +14,11 @@ const { protect } = require("../middleware/authMiddleware");
 // @desc    Get all policies
 // @access  Public
 router.get("/", getAllPolicies);
+
+// @route   POST /api/policies/seed
+// @desc    Seed default policies
+// @access  Private (Government only)
+router.post("/seed", protect, seedPolicies);
 
 // @route   GET /api/policies/:role
 // @desc    Get policies by role

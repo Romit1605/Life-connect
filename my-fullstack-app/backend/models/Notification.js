@@ -23,6 +23,7 @@ const notificationSchema = mongoose.Schema(
                 "alert_rejected",       // Alert rejected by NGO/Hospital
                 "donation_received",    // New donation received
                 "camp_registered",      // Volunteer registered for camp
+                "policy_update",        // New policy added or updated
                 "system"                // System notifications
             ],
             required: true,
@@ -33,11 +34,11 @@ const notificationSchema = mongoose.Schema(
         },
         relatedId: {
             type: mongoose.Schema.Types.ObjectId,
-            // Can reference Request, Alert, Donation, or Camp
+            // Can reference Request, Alert, Donation, Camp, or Policy
         },
         relatedModel: {
             type: String,
-            enum: ["Request", "Alert", "Donation", "Camp"],
+            enum: ["Request", "Alert", "Donation", "Camp", "Policy"],
         },
         actionUrl: {
             type: String,

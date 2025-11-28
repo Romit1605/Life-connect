@@ -35,6 +35,10 @@ const policySchema = mongoose.Schema(
             type: Boolean,
             default: true,
         },
+        deletionReason: {
+            type: String,
+            trim: true,
+        },
     },
     {
         timestamps: true,

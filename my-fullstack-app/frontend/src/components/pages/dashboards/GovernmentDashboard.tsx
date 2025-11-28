@@ -654,7 +654,7 @@ const GovernmentDashboard = () => {
                   <CardTitle className="text-lg">Statistics Summary</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-3 gap-4 text-sm">
+                  <div className="grid grid-cols-4 gap-4 text-sm">
                     <div>
                       <p className="font-semibold mb-2">Camps</p>
                       <ul className="space-y-1 text-muted-foreground">
@@ -680,6 +680,16 @@ const GovernmentDashboard = () => {
                         <li>• Fulfilled: {recordsData.statistics.medicineRequests.fulfilled}</li>
                         <li>• Pending: {recordsData.statistics.medicineRequests.pending}</li>
                         <li>• Cancelled: {recordsData.statistics.medicineRequests.cancelled}</li>
+                      </ul>
+                    </div>
+                    <div>
+                      <p className="font-semibold mb-2">Policies</p>
+                      <ul className="space-y-1 text-muted-foreground">
+                        <li>• Total: {recordsData.statistics.policies.total}</li>
+                        <li>• Pharmacy: {recordsData.statistics.policies.byRole.pharmacy}</li>
+                        <li>• Blood Bank: {recordsData.statistics.policies.byRole.blood_bank}</li>
+                        <li>• Hospital: {recordsData.statistics.policies.byRole.hospital}</li>
+                        <li>• NGO: {recordsData.statistics.policies.byRole.ngo}</li>
                       </ul>
                     </div>
                   </div>
@@ -777,6 +787,39 @@ const GovernmentDashboard = () => {
                             {req.approvedBy && <li>• Approved By: {req.approvedBy}</li>}
                             {req.notes && <li>• Notes: {req.notes}</li>}
                             <li>• Updated: {new Date(req.updatedAt).toLocaleDateString()}</li>
+                          </ul>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Policies Records */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Policies Records</CardTitle>
+                  <CardDescription>All policies sorted by role and section number</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {recordsData.policies.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">No policies recorded</p>
+                    ) : (
+                      recordsData.policies.map((policy) => (
+                        <div key={policy.id} className="p-3 rounded-lg border bg-muted/30">
+                          <p className="font-semibold mb-2">{policy.role.toUpperCase()} - Section {policy.sectionNumber}: {policy.sectionTitle}</p>
+                          <ul className="space-y-1 text-sm text-muted-foreground ml-4">
+                            <li>• Version: {policy.version}</li>
+                            <li>• Last Updated By: {policy.lastUpdatedBy || "N/A"}</li>
+                            <li>• Policy Items:</li>
+                            <ul className="ml-4 space-y-1">
+                              {policy.policyItems.map((item: string, idx: number) => (
+                                <li key={idx}>- {item}</li>
+                              ))}
+                            </ul>
+                            <li>• Created: {new Date(policy.createdAt).toLocaleDateString()}</li>
+                            <li>• Updated: {new Date(policy.updatedAt).toLocaleDateString()}</li>
                           </ul>
                         </div>
                       ))

@@ -58,6 +58,7 @@ export const API_ENDPOINTS = {
     // Policy endpoints
     POLICIES: {
         BASE: `${API_BASE_URL}/api/policies`,
+        SEED: `${API_BASE_URL}/api/policies/seed`,
         BY_ROLE: (role: string) => `${API_BASE_URL}/api/policies/${role}`,
         BY_ID: (id: string) => `${API_BASE_URL}/api/policies/${id}`,
     },

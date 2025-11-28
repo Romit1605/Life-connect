@@ -15,6 +15,7 @@ export interface ReportData {
     camps: any[];
     bloodRequests: any[];
     medicineRequests: any[];
+    policies: any[];
 }
 
 /**
@@ -35,6 +36,7 @@ export const generateCSV = (data: ReportData): string => {
     lines.push(`Total Camps: ${data.statistics.camps.total} (Approved: ${data.statistics.camps.approved}, Rejected: ${data.statistics.camps.rejected}, Pending: ${data.statistics.camps.pending})`);
     lines.push(`Total Blood Requests: ${data.statistics.bloodRequests.total} (Fulfilled: ${data.statistics.bloodRequests.fulfilled}, Pending: ${data.statistics.bloodRequests.pending}, Cancelled: ${data.statistics.bloodRequests.cancelled})`);
     lines.push(`Total Medicine Requests: ${data.statistics.medicineRequests.total} (Fulfilled: ${data.statistics.medicineRequests.fulfilled}, Pending: ${data.statistics.medicineRequests.pending}, Cancelled: ${data.statistics.medicineRequests.cancelled})`);
+    lines.push(`Total Policies: ${data.statistics.policies.total} (Pharmacy: ${data.statistics.policies.byRole.pharmacy}, Blood Bank: ${data.statistics.policies.byRole.blood_bank}, Hospital: ${data.statistics.policies.byRole.hospital}, NGO: ${data.statistics.policies.byRole.ngo})`);
     lines.push("");
 
     // Camps Section
@@ -111,6 +113,27 @@ export const generateCSV = (data: ReportData): string => {
             `"${req.notes}"`,
             new Date(req.createdAt).toLocaleString(),
             new Date(req.updatedAt).toLocaleString(),
+        ];
+        lines.push(row.join(","));
+    });
+
+    // Policies Section
+    lines.push("");
+    lines.push("=== POLICIES ===");
+    lines.push("ID,Role,Section Number,Section Title,Policy Items,Version,Last Updated By,Created At,Updated At");
+
+    data.policies.forEach(policy => {
+        const policyItemsText = policy.policyItems.join("; ");
+        const row = [
+            policy.id,
+            policy.role,
+            policy.sectionNumber,
+            `"${policy.sectionTitle}"`,
+            `"${policyItemsText}"`,
+            policy.version,
+            `"${policy.lastUpdatedBy}"`,
+            new Date(policy.createdAt).toLocaleString(),
+            new Date(policy.updatedAt).toLocaleString(),
         ];
         lines.push(row.join(","));
     });

@@ -2,6 +2,7 @@ const Camp = require("../models/Camp");
 const Request = require("../models/Request");
 const Donation = require("../models/Donation");
 const User = require("../models/User");
+const Policy = require("../models/Policy");
 
 // @desc    Generate comprehensive government report
 // @route   GET /api/reports/comprehensive
@@ -47,6 +48,11 @@ const generateComprehensiveReport = async (req, res) => {
             .populate("donor", "full_name email")
             .sort({ createdAt: -1 });
 
+        // Fetch all policies
+        const policies = await Policy.find(dateFilter)
+            .populate("lastUpdatedBy", "full_name organization_name")
+            .sort({ role: 1, sectionNumber: 1 });
+
         // Calculate statistics
         const stats = {
             camps: {
@@ -70,6 +76,15 @@ const generateComprehensiveReport = async (req, res) => {
             donations: {
                 total: donations.length,
                 totalUnits: donations.reduce((sum, d) => sum + (d.quantity || 0), 0),
+            },
+            policies: {
+                total: policies.length,
+                byRole: {
+                    pharmacy: policies.filter(p => p.role === "pharmacy").length,
+                    blood_bank: policies.filter(p => p.role === "blood_bank").length,
+                    hospital: policies.filter(p => p.role === "hospital").length,
+                    ngo: policies.filter(p => p.role === "ngo").length,
+                }
             }
         };
 
@@ -141,6 +156,17 @@ const generateComprehensiveReport = async (req, res) => {
                 notes: req.notes || "",
                 createdAt: req.createdAt,
                 updatedAt: req.updatedAt,
+            })),
+            policies: policies.map(policy => ({
+                id: policy._id,
+                role: policy.role,
+                sectionTitle: policy.sectionTitle,
+                sectionNumber: policy.sectionNumber,
+                policyItems: policy.policyItems,
+                version: policy.version,
+                lastUpdatedBy: policy.lastUpdatedBy?.organization_name || policy.lastUpdatedBy?.full_name || "",
+                createdAt: policy.createdAt,
+                updatedAt: policy.updatedAt,
             })),
         };
 

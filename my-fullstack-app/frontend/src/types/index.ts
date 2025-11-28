@@ -70,3 +70,13 @@ export interface ApiResponse<T> {
     data?: T;
     error?: string;
 }
+
+export interface PolicyItem {
+    _id: string;
+    role: string;
+    sectionTitle: string;
+    sectionNumber: number;
+    policyItems: string[];
+    version: number;
+    lastUpdatedBy: any;
+}
