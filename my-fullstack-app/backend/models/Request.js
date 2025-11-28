@@ -15,10 +15,12 @@ const requestSchema = mongoose.Schema(
         item_name: {
             type: String, // e.g., "A+" or "Paracetamol"
             required: true,
+            trim: true,
         },
         quantity: {
             type: Number,
             required: true,
+            min: [1, "Quantity must be at least 1"],
         },
         urgency: {
             type: String,
@@ -32,14 +34,23 @@ const requestSchema = mongoose.Schema(
         },
         location: {
             type: String,
+            trim: true,
         },
         notes: {
             type: String,
+            trim: true,
         },
     },
     {
         timestamps: true,
     }
 );
+
+// Indexes for faster queries
+requestSchema.index({ type: 1 });
+requestSchema.index({ urgency: 1 });
+requestSchema.index({ status: 1 });
+requestSchema.index({ requester: 1 });
+requestSchema.index({ createdAt: -1 });
 
 module.exports = mongoose.model("Request", requestSchema);

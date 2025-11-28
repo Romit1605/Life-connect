@@ -3,16 +3,17 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  ArrowLeft, 
-  Bell, 
-  AlertTriangle, 
-  CheckCircle, 
-  Clock, 
+import {
+  ArrowLeft,
+  Bell,
+  AlertTriangle,
+  CheckCircle,
+  Clock,
   Info,
   X
 } from "lucide-react";
 import { toast } from "sonner";
+import Header from "@/components/Header";
 
 const Notifications = () => {
   const navigate = useNavigate();
@@ -119,11 +120,10 @@ const Notifications = () => {
         </Card>
       ) : (
         items.map((notification) => (
-          <Card 
-            key={notification.id} 
-            className={`border transition-all ${
-              notification.read ? "border-border/50" : getSeverityColor(notification.severity)
-            }`}
+          <Card
+            key={notification.id}
+            className={`border transition-all ${notification.read ? "border-border/50" : getSeverityColor(notification.severity)
+              }`}
           >
             <CardContent className="p-4">
               <div className="flex gap-4">
@@ -161,24 +161,17 @@ const Notifications = () => {
   );
 
   return (
-    <div className="min-h-screen bg-background p-4">
-      <div className="container mx-auto max-w-4xl py-8">
+    <div className="min-h-screen bg-background">
+      <Header showBackButton />
+      <div className="container mx-auto max-w-4xl py-8 px-4">
         <div className="flex items-center justify-between mb-6">
-          <Button
-            variant="ghost"
-            onClick={() => navigate(-1)}
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back
-          </Button>
+          <div>
+            <h1 className="text-3xl md:text-4xl font-bold mb-2">Notifications</h1>
+            <p className="text-muted-foreground">Stay updated with alerts and requests</p>
+          </div>
           <Button variant="outline" onClick={handleMarkAllRead}>
             Mark All as Read
           </Button>
-        </div>
-
-        <div className="mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold mb-2">Notifications</h1>
-          <p className="text-muted-foreground">Stay updated with alerts and requests</p>
         </div>
 
         <Tabs defaultValue="all" className="w-full">

@@ -1,30 +1,47 @@
 import { Link } from "react-router-dom";
+import { useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Heart, Calendar, Award, MapPin, Clock, CheckCircle } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Heart, Calendar, Award, MapPin, Clock, CheckCircle, Users } from "lucide-react";
 import { toast } from "sonner";
 
 const VolunteerDashboard = () => {
+  const [selectedCamp, setSelectedCamp] = useState<any>(null);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+
   const upcomingCamps = [
-    { 
-      id: 1, 
-      name: "Community Health Camp", 
-      date: "2024-02-15", 
+    {
+      id: 1,
+      name: "Community Health Camp",
+      date: "2024-02-15",
       time: "9:00 AM - 5:00 PM",
-      location: "Downtown Community Center", 
+      location: "Downtown Community Center",
+      address: "123 Main Street, Downtown",
       role: "Registration Desk",
-      status: "Confirmed"
+      status: "Confirmed",
+      description: "A comprehensive health screening and awareness camp for the local community. Volunteers will assist with registration, patient guidance, and basic administrative tasks.",
+      coordinator: "Dr. Sarah Johnson",
+      contactPhone: "+1 (555) 123-4567",
+      expectedAttendees: 200,
+      volunteersNeeded: 15
     },
-    { 
-      id: 2, 
-      name: "Blood Donation Drive", 
-      date: "2024-02-20", 
+    {
+      id: 2,
+      name: "Blood Donation Drive",
+      date: "2024-02-20",
       time: "10:00 AM - 4:00 PM",
-      location: "University Campus", 
+      location: "University Campus",
+      address: "456 College Ave, University District",
       role: "Donor Support",
-      status: "Pending"
+      status: "Pending",
+      description: "Annual blood donation drive in partnership with the local blood bank. Volunteers will provide support to donors, manage refreshments, and assist with post-donation care.",
+      coordinator: "John Smith",
+      contactPhone: "+1 (555) 987-6543",
+      expectedAttendees: 150,
+      volunteersNeeded: 10
     }
   ];
 
@@ -36,6 +53,23 @@ const VolunteerDashboard = () => {
 
   const handleRegister = (campId: number) => {
     toast.success("Successfully registered for the camp!");
+  };
+
+  const handleViewCertificates = () => {
+    toast.info("Certificates feature coming soon!");
+  };
+
+  const handleViewDetails = (camp: any) => {
+    setSelectedCamp(camp);
+    setIsDetailsOpen(true);
+  };
+
+  const handleCheckIn = (campId: number, campName: string) => {
+    toast.success(`Checked in to ${campName}!`);
+  };
+
+  const handleDownloadCertificate = (campId: number, campName: string) => {
+    toast.success(`Downloading certificate for ${campName}`);
   };
 
   return (
@@ -102,7 +136,7 @@ const VolunteerDashboard = () => {
           </Link>
         </Button>
 
-        <Button className="h-auto py-4" variant="outline">
+        <Button className="h-auto py-4" variant="outline" onClick={handleViewCertificates}>
           <div className="flex flex-col items-center gap-2">
             <Award className="h-6 w-6" />
             <span>View Certificates</span>
@@ -152,9 +186,9 @@ const VolunteerDashboard = () => {
                     <span className="font-medium">Role:</span> {camp.role}
                   </p>
                   <div className="flex gap-2">
-                    <Button variant="outline" size="sm">View Details</Button>
+                    <Button variant="outline" size="sm" onClick={() => handleViewDetails(camp)}>View Details</Button>
                     {camp.status === "Confirmed" && (
-                      <Button size="sm" className="bg-volunteer hover:bg-volunteer/90">
+                      <Button size="sm" className="bg-volunteer hover:bg-volunteer/90" onClick={() => handleCheckIn(camp.id, camp.name)}>
                         <CheckCircle className="mr-2 h-4 w-4" />
                         Check In
                       </Button>
@@ -188,12 +222,112 @@ const VolunteerDashboard = () => {
                     </p>
                   </div>
                 </div>
-                <Button variant="outline" size="sm">Certificate</Button>
+                <Button variant="outline" size="sm" onClick={() => handleDownloadCertificate(camp.id, camp.name)}>Certificate</Button>
               </div>
             ))}
           </div>
         </CardContent>
       </Card>
+
+      {/* Camp Details Modal */}
+      <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-2xl">{selectedCamp?.name}</DialogTitle>
+            <DialogDescription>Complete camp information and details</DialogDescription>
+          </DialogHeader>
+
+          {selectedCamp && (
+            <div className="space-y-6">
+              {/* Status Badge */}
+              <div className="flex items-center gap-2">
+                <Badge className={selectedCamp.status === "Confirmed" ? "bg-ngo text-ngo-foreground" : "bg-alertYellow text-foreground"}>
+                  {selectedCamp.status}
+                </Badge>
+              </div>
+
+              {/* Description */}
+              <div>
+                <h4 className="font-semibold mb-2">Description</h4>
+                <p className="text-sm text-muted-foreground leading-relaxed">{selectedCamp.description}</p>
+              </div>
+
+              {/* Date & Time */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <h4 className="font-semibold mb-2 flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-volunteer" />
+                    Date
+                  </h4>
+                  <p className="text-sm">{new Date(selectedCamp.date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                </div>
+                <div>
+                  <h4 className="font-semibold mb-2 flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-volunteer" />
+                    Time
+                  </h4>
+                  <p className="text-sm">{selectedCamp.time}</p>
+                </div>
+              </div>
+
+              {/* Location */}
+              <div>
+                <h4 className="font-semibold mb-2 flex items-center gap-2">
+                  <MapPin className="h-4 w-4 text-volunteer" />
+                  Location
+                </h4>
+                <p className="text-sm font-medium">{selectedCamp.location}</p>
+                <p className="text-sm text-muted-foreground">{selectedCamp.address}</p>
+              </div>
+
+              {/* Your Role */}
+              <div>
+                <h4 className="font-semibold mb-2">Your Assigned Role</h4>
+                <p className="text-sm bg-volunteer/10 text-volunteer px-3 py-2 rounded-md inline-block">{selectedCamp.role}</p>
+              </div>
+
+              {/* Camp Stats */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <h4 className="font-semibold mb-2 flex items-center gap-2">
+                    <Users className="h-4 w-4 text-volunteer" />
+                    Expected Attendees
+                  </h4>
+                  <p className="text-sm">{selectedCamp.expectedAttendees} people</p>
+                </div>
+                <div>
+                  <h4 className="font-semibold mb-2 flex items-center gap-2">
+                    <Heart className="h-4 w-4 text-volunteer" />
+                    Volunteers Needed
+                  </h4>
+                  <p className="text-sm">{selectedCamp.volunteersNeeded} volunteers</p>
+                </div>
+              </div>
+
+              {/* Coordinator Info */}
+              <div className="bg-muted/50 p-4 rounded-lg">
+                <h4 className="font-semibold mb-2">Camp Coordinator</h4>
+                <p className="text-sm font-medium">{selectedCamp.coordinator}</p>
+                <p className="text-sm text-muted-foreground">{selectedCamp.contactPhone}</p>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-2 pt-4 border-t">
+                {selectedCamp.status === "Confirmed" && (
+                  <Button className="bg-volunteer hover:bg-volunteer/90" onClick={() => {
+                    handleCheckIn(selectedCamp.id, selectedCamp.name);
+                    setIsDetailsOpen(false);
+                  }}>
+                    <CheckCircle className="mr-2 h-4 w-4" />
+                    Check In
+                  </Button>
+                )}
+                <Button variant="outline" onClick={() => setIsDetailsOpen(false)}>Close</Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 };

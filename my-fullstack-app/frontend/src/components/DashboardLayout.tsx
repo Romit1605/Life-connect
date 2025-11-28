@@ -1,14 +1,15 @@
 import { ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { 
-  Bell, 
-  LogOut, 
+import {
+  LogOut,
   Home,
   Menu,
   X
 } from "lucide-react";
 import { useState } from "react";
+import { useAuth } from "@/components/contexts/AuthContext";
+import NotificationsPopover from "./NotificationsPopover";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -19,7 +20,12 @@ interface DashboardLayoutProps {
 
 const DashboardLayout = ({ children, title, role, roleColor }: DashboardLayoutProps) => {
   const navigate = useNavigate();
+  const { signOut } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const handleLogout = () => {
+    signOut();
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -43,22 +49,17 @@ const DashboardLayout = ({ children, title, role, roleColor }: DashboardLayoutPr
             </div>
 
             <div className="flex items-center gap-2">
-              <Button variant="ghost" size="icon" asChild>
-                <Link to="/notifications">
-                  <Bell className="h-5 w-5" />
-                  <span className="sr-only">Notifications</span>
-                </Link>
-              </Button>
+              <NotificationsPopover />
               <Button variant="ghost" size="icon" asChild>
                 <Link to="/">
                   <Home className="h-5 w-5" />
                   <span className="sr-only">Home</span>
                 </Link>
               </Button>
-              <Button 
-                variant="ghost" 
+              <Button
+                variant="ghost"
                 size="icon"
-                onClick={() => navigate("/")}
+                onClick={handleLogout}
               >
                 <LogOut className="h-5 w-5" />
                 <span className="sr-only">Logout</span>

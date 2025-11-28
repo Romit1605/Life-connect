@@ -1,7 +1,8 @@
+
 const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
-const connectDB = require("./config/db");
+const connectDB = require("./config/db.js");
 
 dotenv.config();
 
@@ -23,6 +24,9 @@ app.use("/api/auth", require("./routes/authRoutes"));
 app.use("/api/camps", require("./routes/campRoutes"));
 app.use("/api/donations", require("./routes/donationRoutes"));
 app.use("/api/requests", require("./routes/requestRoutes"));
+app.use("/api/notifications", require("./routes/notificationRoutes"));
+app.use("/api/alerts", require("./routes/alertRoutes"));
+app.use("/api/medicine", require("./routes/medicineRoutes"));
 
 // Error handling middleware
 app.use((err, req, res, next) => {

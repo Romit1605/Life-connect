@@ -1,10 +1,18 @@
 import { Heart, Activity, Building2, Users, Shield, ArrowRight, Droplet, Pill } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button.tsx";
+import { Card, CardContent } from "@/components/ui/card.tsx";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/components/contexts/AuthContext";
+import Header from "@/components/Header";
 
 const Index = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+
+  const getDashboardPath = () => {
+    if (!user?.role) return "/";
+    return `/dashboard/${user.role.toLowerCase()}`;
+  };
 
   const features = [
     {
@@ -42,25 +50,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20">
-      {/* Header */}
-      <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-50">
-        <div className="container mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blood to-primary flex items-center justify-center shadow-lg">
-                <Heart className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-foreground">LifeLink</h1>
-                <p className="text-xs text-muted-foreground">Blood & Medicine Network</p>
-              </div>
-            </div>
-            <Button onClick={() => navigate("/login")} variant="outline">
-              Sign In
-            </Button>
-          </div>
-        </div>
-      </header>
+      <Header />
 
       {/* Hero Section */}
       <section className="container mx-auto px-6 py-20">
@@ -69,25 +59,29 @@ const Index = () => {
             <Activity className="h-4 w-4" />
             Saving Lives Through Smart Distribution
           </div>
-          
+
           <h1 className="text-5xl md:text-6xl font-bold leading-tight">
             Connecting Healthcare
             <span className="block mt-2 bg-gradient-to-r from-blood via-primary to-ngo bg-clip-text text-transparent">
               Resources & Communities
             </span>
           </h1>
-          
+
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            A comprehensive platform managing blood donation, medicine redistribution, 
+            A comprehensive platform managing blood donation, medicine redistribution,
             and healthcare resource optimization to save lives and reduce waste.
           </p>
 
           <div className="flex flex-wrap gap-4 justify-center pt-4">
-            <Button size="xl" variant="hero" onClick={() => navigate("/login")}>
-              Get Started
+            <Button
+              size="lg"
+              variant="default"
+              onClick={() => navigate(user ? getDashboardPath() : "/login")}
+            >
+              {user ? "Go to Dashboard" : "Get Started"}
               <ArrowRight className="h-5 w-5" />
             </Button>
-            <Button size="xl" variant="outline" onClick={() => navigate("/login?role=donor")}>
+            <Button size="lg" variant="outline" onClick={() => navigate(user ? "/camps" : "/login?role=donor")}>
               Donate Blood
               <Droplet className="h-5 w-5" />
             </Button>
@@ -144,14 +138,14 @@ const Index = () => {
               Join the LifeLink Network
             </h2>
             <p className="text-lg opacity-90 mb-8 max-w-2xl mx-auto">
-              Whether you're a hospital, NGO, pharmacy, or individual donor, 
+              Whether you're a hospital, NGO, pharmacy, or individual donor,
               your participation helps save lives and reduce healthcare waste.
             </p>
             <div className="flex flex-wrap gap-4 justify-center">
-              <Button size="xl" variant="secondary" onClick={() => navigate("/login")}>
+              <Button size="lg" variant="secondary" onClick={() => navigate("/login")}>
                 Register Your Organization
               </Button>
-              <Button size="xl" variant="outline" className="bg-white/10 border-white/30 text-white hover:bg-white/20" onClick={() => navigate("/volunteer")}>
+              <Button size="lg" variant="outline" className="bg-white/10 border-white/30 text-white hover:bg-white/20" onClick={() => navigate(user ? "/dashboard/volunteer" : "/login?role=volunteer")}>
                 Become a Volunteer
               </Button>
             </div>
@@ -180,4 +174,3 @@ const Index = () => {
 };
 
 export default Index;
-an

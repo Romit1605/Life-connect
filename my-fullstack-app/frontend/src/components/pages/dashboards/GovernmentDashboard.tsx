@@ -10,10 +10,18 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Shield, TrendingUp, AlertTriangle, CheckCircle, FileText, Users } from "lucide-react";
+import { Shield, TrendingUp, AlertTriangle, CheckCircle, FileText, Users, Droplet, Calendar, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { useState, useEffect } from "react";
+import { alertAPI } from "@/services/api";
+import { Alert } from "@/types";
 
 const GovernmentDashboard = () => {
+  const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null);
+  const [isAlertModalOpen, setIsAlertModalOpen] = useState(false);
+
   const pendingApprovals = [
     { id: 1, type: "Camp", title: "Community Health Camp - Downtown", requester: "HealthCare NGO", date: "2024-02-15", details: "Budget: $50,000, Expected: 500 people" },
     { id: 2, type: "Budget", title: "Medical Equipment Allocation", requester: "City Hospital", date: "2024-02-18", details: "Amount: $75,000" },
@@ -27,12 +35,58 @@ const GovernmentDashboard = () => {
     livesSaved: "45,890"
   };
 
+  useEffect(() => {
+    fetchAlerts();
+  }, []);
+
+  const fetchAlerts = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await alertAPI.getAll();
+      if (!error) {
+        setAlerts(data || []);
+      }
+    } catch (error: any) {
+      console.error("Failed to fetch alerts:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleApprove = (id: number, title: string) => {
     toast.success(`Approved: ${title}`);
   };
 
   const handleReject = (id: number, title: string) => {
     toast.error(`Rejected: ${title}`);
+  };
+
+  const handleViewAlert = (alert: Alert) => {
+    setSelectedAlert(alert);
+    setIsAlertModalOpen(true);
+  };
+
+  const getUrgencyBadge = (urgency: string) => {
+    switch (urgency) {
+      case "critical":
+      case "high":
+        return "destructive";
+      case "medium":
+        return "secondary";
+      default:
+        return "outline";
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "acknowledged":
+        return "bg-ngo/10 border-ngo/50";
+      case "pending":
+        return "bg-alertYellow/10 border-alertYellow/50";
+      default:
+        return "bg-muted/50 border-border/50";
+    }
   };
 
   return (
@@ -103,6 +157,66 @@ const GovernmentDashboard = () => {
         </Button>
       </div>
 
+      {/* Blood Expiry Alerts Monitoring */}
+      <Card className="mb-8">
+        <CardHeader>
+          <CardTitle>Blood Expiry Alerts Monitoring</CardTitle>
+          <CardDescription>View all blood expiry alerts across the system (View Only)</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : alerts.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <Droplet className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>No active blood expiry alerts</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {alerts.map((alert) => (
+                <div key={alert._id} className={`p-4 rounded-lg border ${getStatusColor(alert.status)}`}>
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-4 flex-1">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blood/10">
+                        <Droplet className="h-6 w-6 text-blood" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="font-semibold text-lg">{alert.bloodType} - {alert.quantity} units</p>
+                          <Badge variant={getUrgencyBadge(alert.urgency)} className="text-xs">
+                            {alert.urgency}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground mb-2">
+                          {typeof alert.bloodBank === 'object' ? (alert.bloodBank.organization_name || alert.bloodBank.full_name) : 'Blood Bank'}
+                        </p>
+                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                          <div className="flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            Expires: {new Date(alert.expiryDate).toLocaleDateString()}
+                          </div>
+                          <Badge variant="outline" className="text-xs">
+                            {alert.status}
+                          </Badge>
+                          {alert.responses.length > 0 && (
+                            <span>{alert.responses.length} response(s)</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={() => handleViewAlert(alert)}>
+                      View Details
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Pending Approvals */}
       <Card className="mb-8">
         <CardHeader>
@@ -165,15 +279,15 @@ const GovernmentDashboard = () => {
                           <p className="text-sm text-muted-foreground">{approval.details}</p>
                         </div>
                         <div className="flex gap-2 pt-4">
-                          <Button 
+                          <Button
                             className="flex-1 bg-ngo hover:bg-ngo/90"
                             onClick={() => handleApprove(approval.id, approval.title)}
                           >
                             <CheckCircle className="mr-2 h-4 w-4" />
                             Approve
                           </Button>
-                          <Button 
-                            variant="destructive" 
+                          <Button
+                            variant="destructive"
                             className="flex-1"
                             onClick={() => handleReject(approval.id, approval.title)}
                           >
@@ -184,16 +298,16 @@ const GovernmentDashboard = () => {
                     </DialogContent>
                   </Dialog>
 
-                  <Button 
-                    size="sm" 
+                  <Button
+                    size="sm"
                     className="bg-ngo hover:bg-ngo/90"
                     onClick={() => handleApprove(approval.id, approval.title)}
                   >
                     <CheckCircle className="mr-2 h-4 w-4" />
                     Approve
                   </Button>
-                  <Button 
-                    size="sm" 
+                  <Button
+                    size="sm"
                     variant="destructive"
                     onClick={() => handleReject(approval.id, approval.title)}
                   >
@@ -243,6 +357,93 @@ const GovernmentDashboard = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Alert Details Modal (View Only) */}
+      <Dialog open={isAlertModalOpen} onOpenChange={setIsAlertModalOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Blood Expiry Alert Details (Monitoring)</DialogTitle>
+            <DialogDescription>View alert information - Government monitoring only</DialogDescription>
+          </DialogHeader>
+
+          {selectedAlert && (
+            <div className="space-y-4">
+              <div className="p-4 rounded-lg border border-blood/20 bg-blood/5">
+                <div className="flex items-center gap-3 mb-3">
+                  <Droplet className="h-8 w-8 text-blood" />
+                  <div>
+                    <p className="text-xl font-bold">{selectedAlert.bloodType}</p>
+                    <p className="text-sm text-muted-foreground">{selectedAlert.quantity} units available</p>
+                  </div>
+                </div>
+
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Blood Bank:</span>
+                    <span className="font-medium">
+                      {typeof selectedAlert.bloodBank === 'object' ? (selectedAlert.bloodBank.organization_name || selectedAlert.bloodBank.full_name) : 'Unknown'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Expiry Date:</span>
+                    <span className="font-medium">{new Date(selectedAlert.expiryDate).toLocaleDateString()}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Urgency:</span>
+                    <Badge variant={getUrgencyBadge(selectedAlert.urgency)}>{selectedAlert.urgency}</Badge>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Status:</span>
+                    <Badge variant="outline">{selectedAlert.status}</Badge>
+                  </div>
+                  {selectedAlert.location && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Location:</span>
+                      <span className="font-medium">{selectedAlert.location}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <h4 className="font-semibold mb-2">Message</h4>
+                <p className="text-sm text-muted-foreground bg-muted/50 p-3 rounded-md">
+                  {selectedAlert.message}
+                </p>
+              </div>
+
+              {selectedAlert.responses.length > 0 && (
+                <div>
+                  <h4 className="font-semibold mb-2">Responses ({selectedAlert.responses.length})</h4>
+                  <div className="space-y-2">
+                    {selectedAlert.responses.map((response, idx) => (
+                      <div key={idx} className="p-3 rounded-md bg-muted/50 text-sm">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="font-medium">
+                            {typeof response.respondent === 'object' ? (response.respondent.organization_name || response.respondent.full_name) : 'Unknown'}
+                          </span>
+                          <Badge variant={response.action === "approved" ? "default" : "destructive"} className="text-xs">
+                            {response.action}
+                          </Badge>
+                        </div>
+                        {response.message && (
+                          <p className="text-xs text-muted-foreground">{response.message}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="flex justify-end pt-4 border-t">
+                <Button variant="outline" onClick={() => setIsAlertModalOpen(false)}>
+                  Close
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 };
