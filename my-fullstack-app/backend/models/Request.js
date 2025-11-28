@@ -40,6 +40,10 @@ const requestSchema = mongoose.Schema(
             type: String,
             trim: true,
         },
+        approvedBy: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+        },
     },
     {
         timestamps: true,

@@ -20,6 +20,21 @@ const getCamps = async (req, res) => {
             if (endDate) query.date.$lte = new Date(endDate);
         }
 
+        // Geospatial query
+        const { lat, lng, radius } = req.query;
+        if (lat && lng) {
+            const radiusInKm = radius || 10; // Default 10km
+            query.coordinates = {
+                $near: {
+                    $geometry: {
+                        type: "Point",
+                        coordinates: [parseFloat(lng), parseFloat(lat)]
+                    },
+                    $maxDistance: radiusInKm * 1000 // Convert to meters
+                }
+            };
+        }
+
         const camps = await Camp.find(query).sort({ date: 1 }).populate("organizer", "full_name organization_name email");
         res.status(200).json(camps);
     } catch (error) {
@@ -50,7 +65,7 @@ const getCampById = async (req, res) => {
 // @route   POST /api/camps
 // @access  Private (Hospital/NGO/BloodBank)
 const createCamp = async (req, res) => {
-    const { name, date, location, description, contact_phone } = req.body;
+    const { name, date, location, description, contact_phone, coordinates } = req.body;
 
     if (!name || !date || !location) {
         return res.status(400).json({ message: "Please add all required fields: name, date, and location" });
@@ -63,6 +78,7 @@ const createCamp = async (req, res) => {
             location,
             description,
             contact_phone,
+            coordinates,
             organizer: req.user.id,
         });
 
@@ -101,6 +117,7 @@ const updateCamp = async (req, res) => {
                 description: description !== undefined ? description : camp.description,
                 contact_phone: contact_phone !== undefined ? contact_phone : camp.contact_phone,
                 status: status || camp.status,
+                coordinates: req.body.coordinates || camp.coordinates,
             },
             { new: true, runValidators: true }
         ).populate("organizer", "full_name organization_name email");

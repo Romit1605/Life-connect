@@ -156,16 +156,21 @@ const updateRequest = async (req, res) => {
                 location: isRequester && location !== undefined ? location : request.location,
                 notes: isRequester && notes !== undefined ? notes : request.notes,
                 status: status || request.status,
+                approvedBy: (status === "fulfilled" && !isRequester) ? req.user.id : request.approvedBy,
             },
             { new: true, runValidators: true }
-        ).populate("requester", "full_name organization_name email phone location");
+        ).populate("requester", "full_name organization_name email phone location")
+            .populate("approvedBy", "full_name organization_name");
 
         // Create notification if status changed and user is not requester
         if (status && status !== request.status && !isRequester) {
+            const approverName = req.user.organization_name || req.user.full_name;
+            const actionText = status === "fulfilled" ? `approved by ${approverName}` : status;
+
             await Notification.create({
                 recipient: request.requester,
                 type: "request_update",
-                message: `Your request for ${request.item_name} has been ${status}.`,
+                message: `Your request for ${request.item_name} has been ${actionText}.`,
                 relatedId: request._id,
             });
         }

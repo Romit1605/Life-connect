@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { Request } from "@/types";
+import { Request, Alert } from "@/types";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,6 +20,7 @@ const PharmacyDashboard = () => {
   const navigate = useNavigate();
   const [requests, setRequests] = useState<Request[]>([]);
   const [inventory, setInventory] = useState<any[]>([]);
+  const [alerts, setAlerts] = useState<Alert[]>([]);
   const [loading, setLoading] = useState(true);
   const [fulfilling, setFulfilling] = useState<string | null>(null);
 
@@ -66,6 +67,12 @@ const PharmacyDashboard = () => {
         toast.error("Failed to fetch inventory");
       } else {
         setInventory((inventoryData as any[]) || []);
+      }
+
+      // Fetch alerts
+      const { data: alertsData, error: alertsError } = await alertAPI.getAll();
+      if (!alertsError) {
+        setAlerts(alertsData || []);
       }
 
     } catch (error: any) {
@@ -273,6 +280,53 @@ const PharmacyDashboard = () => {
           </div>
         </Button>
       </div>
+
+      {/* Sent Alerts Section */}
+      {alerts.length > 0 && (
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle>Sent Alerts</CardTitle>
+            <CardDescription>Your medicine expiry alerts and responses</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {alerts.map((alert) => (
+                <div key={alert._id} className="p-4 rounded-lg border border-border/50">
+                  <div className="flex items-start justify-between mb-3">
+                    <div>
+                      <p className="font-semibold">{alert.medicineName || alert.bloodType} - {alert.quantity} units</p>
+                      <p className="text-sm text-muted-foreground">
+                        Expires: {new Date(alert.expiryDate).toLocaleDateString()}
+                      </p>
+                      <p className="text-sm mt-1">{alert.message}</p>
+                    </div>
+                    <Badge variant={alert.status === "acknowledged" ? "outline" : "secondary"}>
+                      {alert.status}
+                    </Badge>
+                  </div>
+
+                  {alert.responses.length > 0 && (
+                    <div className="mt-4 pt-4 border-t space-y-2">
+                      <p className="text-sm font-medium">Responses:</p>
+                      {alert.responses.map((response, idx) => (
+                        <div key={idx} className="text-sm flex items-center gap-2">
+                          <Badge variant={response.action === "approved" ? "default" : "destructive"} className="text-xs">
+                            {response.action}
+                          </Badge>
+                          <span className="text-muted-foreground">
+                            by {typeof response.respondent === 'object' ? (response.respondent.organization_name || response.respondent.full_name) : 'Unknown'}
+                          </span>
+                        </div>
+                      ))}
+
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Incoming Requests */}
       <Card className="mb-8">

@@ -18,6 +18,7 @@ export interface Request {
     status: 'pending' | 'fulfilled' | 'cancelled';
     location?: string;
     notes?: string;
+    approvedBy?: User | string;
     createdAt: string;
     updatedAt: string;
 }
@@ -50,7 +51,9 @@ export interface AlertResponse {
 export interface Alert {
     _id: string;
     bloodBank: string | User;
-    bloodType: 'A+' | 'A-' | 'B+' | 'B-' | 'AB+' | 'AB-' | 'O+' | 'O-';
+    bloodType?: 'A+' | 'A-' | 'B+' | 'B-' | 'AB+' | 'AB-' | 'O+' | 'O-';
+    medicineName?: string;
+    batchNumber?: string;
     quantity: number;
     expiryDate: string;
     urgency: 'low' | 'medium' | 'high' | 'critical';

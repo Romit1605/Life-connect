@@ -42,6 +42,14 @@ const campSchema = mongoose.Schema(
             enum: ["upcoming", "completed", "cancelled"],
             default: "upcoming",
         },
+        coordinates: {
+            lat: {
+                type: Number,
+            },
+            lng: {
+                type: Number,
+            }
+        },
     },
     {
         timestamps: true,
@@ -53,5 +61,6 @@ campSchema.index({ date: 1 });
 campSchema.index({ location: 1 });
 campSchema.index({ status: 1 });
 campSchema.index({ organizer: 1 });
+campSchema.index({ coordinates: "2dsphere" });
 
 module.exports = mongoose.model("Camp", campSchema);
