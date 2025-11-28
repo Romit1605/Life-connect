@@ -2,17 +2,57 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Award, Calendar, Heart, User, Download, Loader2, Trash2 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { certificateAPI } from "@/services/api";
 import { toast } from "sonner";
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
 
 const CertificatesList = () => {
     const [certificates, setCertificates] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedCertificate, setSelectedCertificate] = useState<any | null>(null);
+    const certificateRef = useRef<HTMLDivElement>(null);
 
     const user = JSON.parse(localStorage.getItem("user") || "{}");
     const isNGO = user?.user?.role === "ngo";
+
+    const handleDownload = async () => {
+        if (!certificateRef.current) return;
+
+        try {
+            const canvas = await html2canvas(certificateRef.current, {
+                scale: 2, // Higher scale for better quality
+                useCORS: true,
+                logging: false,
+                backgroundColor: "#ffffff"
+            } as any);
+
+            const imgData = canvas.toDataURL("image/png");
+            const pdf = new jsPDF({
+                orientation: "landscape",
+                unit: "mm",
+                format: "a4"
+            });
+
+            const imgProps = (pdf as any).getImageProperties(imgData);
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+            pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
+
+            // Sanitize filename to avoid browser warnings
+            const safeVolunteerName = (selectedCertificate?.volunteerName || "certificate").replace(/\s+/g, "_");
+            const safeCampName = (selectedCertificate?.campName || "camp").replace(/\s+/g, "_");
+
+            pdf.save(`${safeVolunteerName}_${safeCampName}.pdf`);
+
+            toast.success("Certificate downloaded successfully!");
+        } catch (error) {
+            console.error("Download error:", error);
+            toast.error("Failed to generate PDF. Please try again.");
+        }
+    };
 
     useEffect(() => {
         fetchCertificates();
@@ -246,14 +286,22 @@ const CertificatesList = () => {
                         <div className="bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 p-8 rounded-lg max-w-5xl w-full my-8">
                             <div className="flex justify-between items-center mb-4">
                                 <h2 className="text-2xl font-bold">Certificate Preview</h2>
-                                <Button onClick={() => setSelectedCertificate(null)} variant="outline">
-                                    Close
-                                </Button>
+                                <div className="flex gap-2">
+                                    <Button onClick={() => handleDownload()} className="bg-blue-600 hover:bg-blue-700">
+                                        <Download className="h-4 w-4 mr-2" />
+                                        Download PDF
+                                    </Button>
+                                    <Button onClick={() => setSelectedCertificate(null)} variant="outline">
+                                        Close
+                                    </Button>
+                                </div>
                             </div>
-                            <CertificatePreview certificate={selectedCertificate} />
+                            <div ref={certificateRef} className="bg-white">
+                                <CertificatePreview certificate={selectedCertificate} />
+                            </div>
                             <div className="text-center mt-6 text-gray-600">
                                 <p className="text-sm">
-                                    💡 Tip: Use your browser's print function (Ctrl+P / Cmd+P) to save or print this certificate.
+                                    💡 Tip: You can also use your browser's print function (Ctrl+P / Cmd+P).
                                 </p>
                             </div>
                         </div>
