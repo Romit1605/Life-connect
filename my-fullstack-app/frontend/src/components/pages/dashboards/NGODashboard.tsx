@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Users, Calendar, Package, TrendingUp, Droplet, AlertTriangle, Loader2, CheckCircle, XCircle } from "lucide-react";
+import { Users, Calendar, Package, TrendingUp, Droplet, AlertTriangle, Loader2, CheckCircle, XCircle, Award } from "lucide-react";
 import { useState, useEffect } from "react";
 import { alertAPI, campAPI, requestAPI } from "@/services/api";
 import { toast } from "sonner";
@@ -49,19 +49,30 @@ const NGODashboard = () => {
 
       // Fetch my camps
       const { data: campsData, error: campsError } = await campAPI.getAll();
-      if (!campsError) {
+      console.log("Camps Fetch - Error:", campsError);
+      console.log("Camps Fetch - Data:", campsData);
+
+      if (campsError) {
+        toast.error(`Failed to fetch camps: ${campsError}`);
+      } else {
+        console.log("Current User ID:", user?._id);
         const myOwnCamps = ((campsData as any[]) || []).filter((camp: any) => {
-          if (!camp.organizer) return false;
+          if (!camp.organizer) {
+            console.log("Camp missing organizer:", camp.name);
+            return false;
+          }
           const organizerId = typeof camp.organizer === 'object' ? camp.organizer._id : camp.organizer;
-
-
-
 
           const orgIdStr = String(organizerId);
           const userIdStr = String(user?._id);
 
-          return orgIdStr === userIdStr;
+          const isMatch = orgIdStr === userIdStr;
+          if (!isMatch) {
+            console.log(`Mismatch for camp ${camp.name}: Camp Org ${orgIdStr} vs User ${userIdStr}`);
+          }
+          return isMatch;
         });
+        console.log("Filtered My Camps:", myOwnCamps);
         setMyCamps(myOwnCamps);
       }
 
@@ -195,11 +206,34 @@ const NGODashboard = () => {
           </Link>
         </Button>
 
-        <Button className="h-auto py-4" variant="outline">
-          <div className="flex flex-col items-center gap-2">
-            <Users className="h-6 w-6" />
-            <span>Manage Volunteers</span>
-          </div>
+        <Button className="h-auto py-4" variant="outline" asChild>
+          <Link to="/ngo/manage-volunteers">
+            <div className="flex flex-col items-center gap-2">
+              <Users className="h-6 w-6" />
+              <span>Manage Volunteers</span>
+            </div>
+          </Link>
+        </Button>
+      </div>
+
+      {/* Volunteer Management Section */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+        <Button className="h-auto py-4" variant="outline" asChild>
+          <Link to="/ngo/request-volunteers">
+            <div className="flex flex-col items-center gap-2">
+              <Users className="h-6 w-6" />
+              <span>Request Volunteers</span>
+            </div>
+          </Link>
+        </Button>
+
+        <Button className="h-auto py-4" variant="outline" asChild>
+          <Link to="/ngo/certificates">
+            <div className="flex flex-col items-center gap-2">
+              <Award className="h-6 w-6" />
+              <span>View Certificates</span>
+            </div>
+          </Link>
         </Button>
       </div>
 

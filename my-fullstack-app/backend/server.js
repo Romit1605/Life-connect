@@ -29,6 +29,9 @@ app.use("/api/alerts", require("./routes/alertRoutes"));
 app.use("/api/medicine", require("./routes/medicineRoutes"));
 app.use("/api/reports", require("./routes/reportRoutes"));
 app.use("/api/policies", require("./routes/policyRoutes"));
+app.use("/api/volunteers", require("./routes/volunteerRoutes"));
+app.use("/api/certificates", require("./routes/certificateRoutes"));
+app.use("/api/volunteer-requests", require("./routes/volunteerRequestRoutes"));
 
 // Error handling middleware
 app.use((err, req, res, next) => {

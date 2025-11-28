@@ -21,6 +21,10 @@ import GovernmentDashboard from "@/components/pages/dashboards/GovernmentDashboa
 import VolunteerDashboard from "@/components/pages/dashboards/VolunteerDashboard.tsx";
 import BloodBankDashboard from "@/components/pages/dashboards/BloodBankDashboard.tsx";
 import Rules from "@/components/pages/Rules.tsx";
+import ManageVolunteers from "@/components/pages/ManageVolunteers.tsx";
+import CertificatesList from "@/components/pages/CertificatesList.tsx";
+import RequestVolunteers from "@/components/pages/RequestVolunteers.tsx";
+import VolunteerOpportunities from "@/components/pages/VolunteerOpportunities.tsx";
 import NotFound from "@/components/pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -50,6 +54,10 @@ const App = () => (
             <Route path="/dashboard/volunteer" element={<VolunteerDashboard />} />
             <Route path="/dashboard/blood-bank" element={<BloodBankDashboard />} />
             <Route path="/rules" element={<Rules />} />
+            <Route path="/ngo/manage-volunteers" element={<ManageVolunteers />} />
+            <Route path="/ngo/certificates" element={<CertificatesList />} />
+            <Route path="/ngo/request-volunteers" element={<RequestVolunteers />} />
+            <Route path="/volunteer/opportunities" element={<VolunteerOpportunities />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>

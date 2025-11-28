@@ -62,6 +62,33 @@ export const API_ENDPOINTS = {
         BY_ROLE: (role: string) => `${API_BASE_URL}/api/policies/${role}`,
         BY_ID: (id: string) => `${API_BASE_URL}/api/policies/${id}`,
     },
+
+    // Volunteer endpoints
+    VOLUNTEERS: {
+        BASE: `${API_BASE_URL}/api/volunteers`,
+        APPLY: `${API_BASE_URL}/api/volunteers/apply`,
+        APPLICATIONS: `${API_BASE_URL}/api/volunteers/applications`,
+        MY_APPLICATIONS: `${API_BASE_URL}/api/volunteers/my-applications`,
+        APPROVE: (id: string) => `${API_BASE_URL}/api/volunteers/${id}/approve`,
+        REJECT: (id: string) => `${API_BASE_URL}/api/volunteers/${id}/reject`,
+        UPDATE_HOURS: (id: string) => `${API_BASE_URL}/api/volunteers/${id}/hours`,
+    },
+
+    // Certificate endpoints
+    CERTIFICATES: {
+        BASE: `${API_BASE_URL}/api/certificates`,
+        GENERATE: `${API_BASE_URL}/api/certificates/generate`,
+        NGO: `${API_BASE_URL}/api/certificates/ngo`,
+        MY_CERTIFICATES: `${API_BASE_URL}/api/certificates/my-certificates`,
+        BY_ID: (id: string) => `${API_BASE_URL}/api/certificates/${id}`,
+    },
+
+    // Volunteer Request endpoints
+    VOLUNTEER_REQUESTS: {
+        BASE: `${API_BASE_URL}/api/volunteer-requests`,
+        MY_REQUESTS: `${API_BASE_URL}/api/volunteer-requests/my-requests`,
+        BY_ID: (id: string) => `${API_BASE_URL}/api/volunteer-requests/${id}`,
+    },
 };
 
 export default API_BASE_URL;

@@ -70,6 +70,21 @@ const getCampById = async (req, res) => {
     }
 };
 
+// Helper function to mock geocoding (replace with real geocoding service in production)
+const geocodeAddress = async (address) => {
+    // This is a mock implementation. In a real app, use Google Maps Geocoding API or similar.
+    // For now, we'll generate random coordinates around a central point (e.g., New York)
+    // to simulate different locations.
+    const baseLat = 40.7128;
+    const baseLng = -74.0060;
+    const randomOffset = () => (Math.random() - 0.5) * 0.1; // +/- 0.05 degrees
+
+    return {
+        lat: baseLat + randomOffset(),
+        lng: baseLng + randomOffset()
+    };
+};
+
 // @desc    Create a camp
 // @route   POST /api/camps
 // @access  Private (Hospital/NGO/BloodBank)
@@ -81,13 +96,20 @@ const createCamp = async (req, res) => {
     }
 
     try {
+        let campCoordinates = coordinates;
+
+        // If coordinates are not provided, try to geocode the location
+        if (!campCoordinates || !campCoordinates.lat || !campCoordinates.lng) {
+            campCoordinates = await geocodeAddress(location);
+        }
+
         const camp = await Camp.create({
             name,
             date,
             location,
             description,
             contact_phone,
-            coordinates,
+            coordinates: campCoordinates,
             resourceRequests: resourceRequests || [],
             volunteersNeeded: volunteersNeeded || 0,
             organizer: req.user.id,
@@ -158,7 +180,14 @@ const updateCamp = async (req, res) => {
             return res.status(403).json({ message: "Not authorized to update this camp" });
         }
 
-        const { name, date, location, description, contact_phone, status } = req.body;
+        const { name, date, location, description, contact_phone, status, coordinates } = req.body;
+
+        let campCoordinates = coordinates || camp.coordinates;
+
+        // If location changed but coordinates didn't, re-geocode
+        if (location && location !== camp.location && (!coordinates || !coordinates.lat)) {
+            campCoordinates = await geocodeAddress(location);
+        }
 
         const updatedCamp = await Camp.findByIdAndUpdate(
             req.params.id,
@@ -169,7 +198,7 @@ const updateCamp = async (req, res) => {
                 description: description !== undefined ? description : camp.description,
                 contact_phone: contact_phone !== undefined ? contact_phone : camp.contact_phone,
                 status: status || camp.status,
-                coordinates: req.body.coordinates || camp.coordinates,
+                coordinates: campCoordinates,
             },
             { new: true, runValidators: true }
         ).populate("organizer", "full_name organization_name email");

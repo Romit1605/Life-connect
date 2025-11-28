@@ -268,3 +268,61 @@ export const policyAPI = {
         method: 'POST',
     }),
 };
+
+// Volunteer API
+export const volunteerAPI = {
+    apply: (applicationData: any) => apiCall(API_ENDPOINTS.VOLUNTEERS.APPLY, {
+        method: 'POST',
+        body: JSON.stringify(applicationData),
+    }),
+    getApplications: () => apiCall(API_ENDPOINTS.VOLUNTEERS.APPLICATIONS),
+    getMyApplications: () => apiCall(API_ENDPOINTS.VOLUNTEERS.MY_APPLICATIONS),
+    approve: (id: string) => apiCall(API_ENDPOINTS.VOLUNTEERS.APPROVE(id), {
+        method: 'PUT',
+    }),
+    reject: (id: string, reason?: string) => apiCall(API_ENDPOINTS.VOLUNTEERS.REJECT(id), {
+        method: 'PUT',
+        body: JSON.stringify({ reason }),
+    }),
+    updateHours: (id: string, hoursWorked: number) => apiCall(API_ENDPOINTS.VOLUNTEERS.UPDATE_HOURS(id), {
+        method: 'PUT',
+        body: JSON.stringify({ hoursWorked }),
+    }),
+};
+
+// Certificate API
+export const certificateAPI = {
+    generate: (certificateData: any) => apiCall(API_ENDPOINTS.CERTIFICATES.GENERATE, {
+        method: 'POST',
+        body: JSON.stringify(certificateData),
+    }),
+    getNGOCertificates: () => apiCall(API_ENDPOINTS.CERTIFICATES.NGO),
+    getMyCertificates: () => apiCall(API_ENDPOINTS.CERTIFICATES.MY_CERTIFICATES),
+    getById: (id: string) => apiCall(API_ENDPOINTS.CERTIFICATES.BY_ID(id)),
+    delete: (id: string) => apiCall(API_ENDPOINTS.CERTIFICATES.BY_ID(id), {
+        method: 'DELETE',
+    }),
+};
+
+// Volunteer Request API
+export const volunteerRequestAPI = {
+    create: (requestData: any) => apiCall(API_ENDPOINTS.VOLUNTEER_REQUESTS.BASE, {
+        method: 'POST',
+        body: JSON.stringify(requestData),
+    }),
+    getAll: (filters?: { status?: string }) => {
+        const params = new URLSearchParams();
+        if (filters?.status) params.append('status', filters.status);
+        const url = filters ? `${API_ENDPOINTS.VOLUNTEER_REQUESTS.BASE}?${params}` : API_ENDPOINTS.VOLUNTEER_REQUESTS.BASE;
+        return apiCall(url);
+    },
+    getMyRequests: () => apiCall(API_ENDPOINTS.VOLUNTEER_REQUESTS.MY_REQUESTS),
+    update: (id: string, requestData: any) => apiCall(API_ENDPOINTS.VOLUNTEER_REQUESTS.BY_ID(id), {
+        method: 'PUT',
+        body: JSON.stringify(requestData),
+    }),
+    delete: (id: string) => apiCall(API_ENDPOINTS.VOLUNTEER_REQUESTS.BY_ID(id), {
+        method: 'DELETE',
+    }),
+};
+

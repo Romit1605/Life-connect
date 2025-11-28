@@ -266,6 +266,31 @@ const Camps = () => {
                         <p className="text-sm text-muted-foreground mb-4">{camp.description}</p>
                       )}
 
+                      {/* Volunteer Opportunity Section */}
+                      {camp.volunteerRequest && (
+                        <div className="mb-4 p-3 bg-volunteer/10 rounded-lg border border-volunteer/20">
+                          <div className="flex items-center justify-between mb-2">
+                            <h4 className="font-semibold text-sm flex items-center gap-2">
+                              <Users className="h-4 w-4 text-volunteer" />
+                              Volunteers Needed
+                            </h4>
+                            <Badge variant="outline" className="text-volunteer border-volunteer">
+                              {camp.volunteerRequest.volunteersNeeded} Spots
+                            </Badge>
+                          </div>
+                          <p className="text-xs text-muted-foreground mb-2 line-clamp-2">
+                            {camp.volunteerRequest.description}
+                          </p>
+                          <Button
+                            size="sm"
+                            className="w-full bg-volunteer hover:bg-volunteer/90 h-8 text-xs"
+                            onClick={() => navigate("/volunteer/opportunities")}
+                          >
+                            View & Apply
+                          </Button>
+                        </div>
+                      )}
+
                       <div className="flex gap-2">
                         <Dialog>
                           <DialogTrigger asChild>
@@ -308,6 +333,35 @@ const Camps = () => {
                                   <p className="text-sm text-muted-foreground">{camp.description}</p>
                                 </div>
                               )}
+
+                              {camp.volunteerRequest && (
+                                <div className="p-4 bg-volunteer/5 rounded-lg border border-volunteer/10">
+                                  <h4 className="font-semibold mb-2 flex items-center gap-2">
+                                    <Users className="h-4 w-4 text-volunteer" />
+                                    Volunteer Opportunity
+                                  </h4>
+                                  <div className="grid grid-cols-2 gap-4 mb-3">
+                                    <div>
+                                      <span className="text-xs font-medium text-muted-foreground">Needed</span>
+                                      <p className="text-sm">{camp.volunteerRequest.volunteersNeeded} Volunteers</p>
+                                    </div>
+                                    <div>
+                                      <span className="text-xs font-medium text-muted-foreground">Deadline</span>
+                                      <p className="text-sm">{new Date(camp.volunteerRequest.deadline).toLocaleDateString()}</p>
+                                    </div>
+                                  </div>
+                                  <p className="text-sm text-muted-foreground mb-3">
+                                    {camp.volunteerRequest.description}
+                                  </p>
+                                  <Button
+                                    className="w-full bg-volunteer hover:bg-volunteer/90"
+                                    onClick={() => navigate("/volunteer/opportunities")}
+                                  >
+                                    Apply as Volunteer
+                                  </Button>
+                                </div>
+                              )}
+
                               <Button
                                 className="w-full bg-ngo hover:bg-ngo/90"
                                 onClick={() => handleRegister(camp._id, camp.name)}

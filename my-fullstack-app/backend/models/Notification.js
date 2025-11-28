@@ -24,6 +24,11 @@ const notificationSchema = mongoose.Schema(
                 "donation_received",    // New donation received
                 "camp_registered",      // Volunteer registered for camp
                 "policy_update",        // New policy added or updated
+                "volunteer_application", // New volunteer application
+                "volunteer_approved",   // Volunteer application approved
+                "volunteer_rejected",   // Volunteer application rejected
+                "volunteer_request",    // New volunteer request posted
+                "certificate_issued",   // Certificate issued to volunteer
                 "system"                // System notifications
             ],
             required: true,
@@ -38,7 +43,7 @@ const notificationSchema = mongoose.Schema(
         },
         relatedModel: {
             type: String,
-            enum: ["Request", "Alert", "Donation", "Camp", "Policy"],
+            enum: ["Request", "Alert", "Donation", "Camp", "Policy", "VolunteerApplication", "Certificate", "VolunteerRequest"],
         },
         actionUrl: {
             type: String,
