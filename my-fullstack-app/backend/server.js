@@ -27,6 +27,8 @@ app.use("/api/requests", require("./routes/requestRoutes"));
 app.use("/api/notifications", require("./routes/notificationRoutes"));
 app.use("/api/alerts", require("./routes/alertRoutes"));
 app.use("/api/medicine", require("./routes/medicineRoutes"));
+app.use("/api/reports", require("./routes/reportRoutes"));
+app.use("/api/policies", require("./routes/policyRoutes"));
 
 // Error handling middleware
 app.use((err, req, res, next) => {

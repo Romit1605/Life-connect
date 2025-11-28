@@ -20,6 +20,7 @@ import PharmacyDashboard from "@/components/pages/dashboards/PharmacyDashboard.t
 import GovernmentDashboard from "@/components/pages/dashboards/GovernmentDashboard.tsx";
 import VolunteerDashboard from "@/components/pages/dashboards/VolunteerDashboard.tsx";
 import BloodBankDashboard from "@/components/pages/dashboards/BloodBankDashboard.tsx";
+import Rules from "@/components/pages/Rules.tsx";
 import NotFound from "@/components/pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -48,6 +49,7 @@ const App = () => (
             <Route path="/dashboard/government" element={<GovernmentDashboard />} />
             <Route path="/dashboard/volunteer" element={<VolunteerDashboard />} />
             <Route path="/dashboard/blood-bank" element={<BloodBankDashboard />} />
+            <Route path="/rules" element={<Rules />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>

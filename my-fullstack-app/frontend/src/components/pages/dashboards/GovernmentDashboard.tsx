@@ -13,7 +13,8 @@ import {
 import { Shield, TrendingUp, AlertTriangle, CheckCircle, FileText, Users, Droplet, Calendar, Loader2, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { useState, useEffect } from "react";
-import { alertAPI, campAPI } from "@/services/api";
+import { alertAPI, campAPI, reportAPI } from "@/services/api";
+import { generateCSV, downloadFile, generateReportFilename, ReportData } from "@/utils/reportUtils";
 import { Alert } from "@/types";
 
 const GovernmentDashboard = () => {
@@ -23,8 +24,14 @@ const GovernmentDashboard = () => {
   const [isAlertModalOpen, setIsAlertModalOpen] = useState(false);
 
   const [pendingCamps, setPendingCamps] = useState<any[]>([]);
+  const [approvedCamps, setApprovedCamps] = useState<any[]>([]);
+  const [rejectedCamps, setRejectedCamps] = useState<any[]>([]);
   const [approvingCamp, setApprovingCamp] = useState<string | null>(null);
   const [rejectingCamp, setRejectingCamp] = useState<string | null>(null);
+  const [loadingRecords, setLoadingRecords] = useState(false);
+  const [recordsData, setRecordsData] = useState<ReportData | null>(null);
+  const [isRecordsModalOpen, setIsRecordsModalOpen] = useState(false);
+  const [downloadingCSV, setDownloadingCSV] = useState(false);
 
   const analytics = {
     totalBloodUnits: "15,420",
@@ -42,8 +49,13 @@ const GovernmentDashboard = () => {
     try {
       const { data: campsData, error: campsError } = await campAPI.getAll();
       if (!campsError) {
-        const pending = ((campsData as any[]) || []).filter((camp: any) => camp.governmentApproval?.status === "pending");
+        const allCamps = (campsData as any[]) || [];
+        const pending = allCamps.filter((camp: any) => camp.governmentApproval?.status === "pending");
+        const approved = allCamps.filter((camp: any) => camp.governmentApproval?.status === "approved");
+        const rejected = allCamps.filter((camp: any) => camp.governmentApproval?.status === "rejected");
         setPendingCamps(pending);
+        setApprovedCamps(approved);
+        setRejectedCamps(rejected);
       }
     } catch (error) {
       console.error("Failed to fetch camps:", error);
@@ -98,6 +110,38 @@ const GovernmentDashboard = () => {
       toast.error(error.message || "Failed to reject camp");
     } finally {
       setRejectingCamp(null);
+    }
+  };
+
+  const handleViewRecords = async () => {
+    setLoadingRecords(true);
+    try {
+      const { data, error } = await reportAPI.generateComprehensive();
+      if (error) {
+        toast.error(error);
+      } else {
+        setRecordsData(data as ReportData);
+        setIsRecordsModalOpen(true);
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Failed to load records");
+    } finally {
+      setLoadingRecords(false);
+    }
+  };
+
+  const handleDownloadCSV = () => {
+    if (!recordsData) return;
+    setDownloadingCSV(true);
+    try {
+      const csv = generateCSV(recordsData);
+      const filename = generateReportFilename("government_comprehensive_report");
+      downloadFile(csv, filename, "text/csv");
+      toast.success("Report downloaded successfully!");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to download report");
+    } finally {
+      setDownloadingCSV(false);
     }
   };
 
@@ -182,14 +226,27 @@ const GovernmentDashboard = () => {
           </div>
         </Button>
 
-        <Button className="h-auto py-4" variant="outline">
+        <Button
+          className="h-auto py-4"
+          variant="outline"
+          onClick={handleViewRecords}
+          disabled={loadingRecords}
+        >
           <div className="flex flex-col items-center gap-2">
-            <FileText className="h-6 w-6" />
-            <span>Generate Reports</span>
+            {loadingRecords ? (
+              <Loader2 className="h-6 w-6 animate-spin" />
+            ) : (
+              <FileText className="h-6 w-6" />
+            )}
+            <span>{loadingRecords ? "Loading..." : "View Records"}</span>
           </div>
         </Button>
 
-        <Button className="h-auto py-4" variant="outline">
+        <Button
+          className="h-auto py-4"
+          variant="outline"
+          onClick={() => window.location.href = "/rules"}
+        >
           <div className="flex flex-col items-center gap-2">
             <Users className="h-6 w-6" />
             <span>Policy Actions</span>
@@ -336,6 +393,104 @@ const GovernmentDashboard = () => {
         </CardContent>
       </Card>
 
+      {/* Approved Camps */}
+      <Card className="mb-8">
+        <CardHeader>
+          <CardTitle>Approved Camps</CardTitle>
+          <CardDescription>Camps approved by government</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {approvedCamps.length === 0 ? (
+              <p className="text-center text-muted-foreground py-4">No approved camps.</p>
+            ) : (
+              approvedCamps.map((camp) => (
+                <div key={camp._id} className="p-4 rounded-lg border border-ngo/30 bg-ngo/5">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-start gap-4">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-ngo/10">
+                        <CheckCircle className="h-6 w-6 text-ngo" />
+                      </div>
+                      <div>
+                        <p className="font-semibold mb-1">{camp.name}</p>
+                        <p className="text-sm text-muted-foreground mb-1">
+                          Organized by: {typeof camp.organizer === 'object' ? (camp.organizer.organization_name || camp.organizer.full_name) : 'NGO'}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          Date: {new Date(camp.date).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                    <Badge className="bg-ngo text-white">Approved</Badge>
+                  </div>
+
+                  <div className="pl-16 space-y-2">
+                    <p className="text-sm text-muted-foreground">
+                      Location: {camp.location} • Volunteers Needed: {camp.volunteersNeeded}
+                    </p>
+                    {camp.governmentApproval?.approvedBy && (
+                      <p className="text-sm text-ngo font-medium">
+                        Approved by: {typeof camp.governmentApproval.approvedBy === 'object'
+                          ? (camp.governmentApproval.approvedBy.organization_name || camp.governmentApproval.approvedBy.full_name)
+                          : 'Government'} on {new Date(camp.governmentApproval.approvedAt).toLocaleString()}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Rejected Camps */}
+      <Card className="mb-8">
+        <CardHeader>
+          <CardTitle>Rejected Camps</CardTitle>
+          <CardDescription>Camps rejected by government</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {rejectedCamps.length === 0 ? (
+              <p className="text-center text-muted-foreground py-4">No rejected camps.</p>
+            ) : (
+              rejectedCamps.map((camp) => (
+                <div key={camp._id} className="p-4 rounded-lg border border-destructive/30 bg-destructive/5">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-start gap-4">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10">
+                        <XCircle className="h-6 w-6 text-destructive" />
+                      </div>
+                      <div>
+                        <p className="font-semibold mb-1">{camp.name}</p>
+                        <p className="text-sm text-muted-foreground mb-1">
+                          Organized by: {typeof camp.organizer === 'object' ? (camp.organizer.organization_name || camp.organizer.full_name) : 'NGO'}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          Date: {new Date(camp.date).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                    <Badge variant="destructive">Rejected</Badge>
+                  </div>
+
+                  <div className="pl-16 space-y-2">
+                    <p className="text-sm text-muted-foreground">
+                      Location: {camp.location}
+                    </p>
+                    {camp.governmentApproval?.rejectionReason && (
+                      <p className="text-sm text-destructive font-medium">
+                        Rejection Reason: {camp.governmentApproval.rejectionReason}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Live Alerts */}
       <Card>
         <CardHeader>
@@ -453,6 +608,185 @@ const GovernmentDashboard = () => {
 
               <div className="flex justify-end pt-4 border-t">
                 <Button variant="outline" onClick={() => setIsAlertModalOpen(false)}>
+                  Close
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Records Modal */}
+      <Dialog open={isRecordsModalOpen} onOpenChange={setIsRecordsModalOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center justify-between">
+              <span>System Records</span>
+              <Button
+                onClick={handleDownloadCSV}
+                disabled={downloadingCSV}
+                size="sm"
+                className="bg-government hover:bg-government/90"
+              >
+                {downloadingCSV ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Downloading...
+                  </>
+                ) : (
+                  <>
+                    <FileText className="mr-2 h-4 w-4" />
+                    Download CSV
+                  </>
+                )}
+              </Button>
+            </DialogTitle>
+            <DialogDescription>
+              Comprehensive system records sorted by date
+            </DialogDescription>
+          </DialogHeader>
+
+          {recordsData && (
+            <div className="space-y-6 mt-4">
+              {/* Statistics Summary */}
+              <Card className="border-government/20">
+                <CardHeader>
+                  <CardTitle className="text-lg">Statistics Summary</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-3 gap-4 text-sm">
+                    <div>
+                      <p className="font-semibold mb-2">Camps</p>
+                      <ul className="space-y-1 text-muted-foreground">
+                        <li>• Total: {recordsData.statistics.camps.total}</li>
+                        <li>• Approved: {recordsData.statistics.camps.approved}</li>
+                        <li>• Rejected: {recordsData.statistics.camps.rejected}</li>
+                        <li>• Pending: {recordsData.statistics.camps.pending}</li>
+                      </ul>
+                    </div>
+                    <div>
+                      <p className="font-semibold mb-2">Blood Requests</p>
+                      <ul className="space-y-1 text-muted-foreground">
+                        <li>• Total: {recordsData.statistics.bloodRequests.total}</li>
+                        <li>• Fulfilled: {recordsData.statistics.bloodRequests.fulfilled}</li>
+                        <li>• Pending: {recordsData.statistics.bloodRequests.pending}</li>
+                        <li>• Cancelled: {recordsData.statistics.bloodRequests.cancelled}</li>
+                      </ul>
+                    </div>
+                    <div>
+                      <p className="font-semibold mb-2">Medicine Requests</p>
+                      <ul className="space-y-1 text-muted-foreground">
+                        <li>• Total: {recordsData.statistics.medicineRequests.total}</li>
+                        <li>• Fulfilled: {recordsData.statistics.medicineRequests.fulfilled}</li>
+                        <li>• Pending: {recordsData.statistics.medicineRequests.pending}</li>
+                        <li>• Cancelled: {recordsData.statistics.medicineRequests.cancelled}</li>
+                      </ul>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Camps Records */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Camps Records</CardTitle>
+                  <CardDescription>All camps sorted by date (newest first)</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {recordsData.camps.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">No camps recorded</p>
+                    ) : (
+                      recordsData.camps.map((camp) => (
+                        <div key={camp.id} className="p-3 rounded-lg border bg-muted/30">
+                          <p className="font-semibold mb-2">{camp.name}</p>
+                          <ul className="space-y-1 text-sm text-muted-foreground ml-4">
+                            <li>• Date: {new Date(camp.date).toLocaleDateString()}</li>
+                            <li>• Organizer: {camp.organizer}</li>
+                            <li>• Location: {camp.location}</li>
+                            <li>• Status: {camp.status} | Approval: {camp.approvalStatus}</li>
+                            <li>• Hospital Approval: {camp.hospitalApproval.status}
+                              {camp.hospitalApproval.approvedBy && ` by ${camp.hospitalApproval.approvedBy}`}
+                              {camp.hospitalApproval.approvedAt && ` on ${new Date(camp.hospitalApproval.approvedAt).toLocaleDateString()}`}
+                            </li>
+                            <li>• Government Approval: {camp.governmentApproval.status}
+                              {camp.governmentApproval.approvedBy && ` by ${camp.governmentApproval.approvedBy}`}
+                              {camp.governmentApproval.approvedAt && ` on ${new Date(camp.governmentApproval.approvedAt).toLocaleDateString()}`}
+                            </li>
+                            {camp.governmentApproval.rejectionReason && (
+                              <li>• Rejection Reason: {camp.governmentApproval.rejectionReason}</li>
+                            )}
+                            <li>• Volunteers Needed: {camp.volunteersNeeded} | Registrations: {camp.registrations}</li>
+                          </ul>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Blood Requests Records */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Blood Requests Records</CardTitle>
+                  <CardDescription>All blood requests sorted by date (newest first)</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {recordsData.bloodRequests.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">No blood requests recorded</p>
+                    ) : (
+                      recordsData.bloodRequests.map((req) => (
+                        <div key={req.id} className="p-3 rounded-lg border bg-muted/30">
+                          <p className="font-semibold mb-2">Blood Type: {req.bloodType}</p>
+                          <ul className="space-y-1 text-sm text-muted-foreground ml-4">
+                            <li>• Requester: {req.requester}</li>
+                            <li>• Quantity: {req.quantity} units</li>
+                            <li>• Urgency: {req.urgency}</li>
+                            <li>• Status: {req.status}</li>
+                            {req.approvedBy && <li>• Approved By: {req.approvedBy}</li>}
+                            {req.notes && <li>• Notes: {req.notes}</li>}
+                            <li>• Updated: {new Date(req.updatedAt).toLocaleDateString()}</li>
+                          </ul>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Medicine Requests Records */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Medicine Requests Records</CardTitle>
+                  <CardDescription>All medicine requests sorted by date (newest first)</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {recordsData.medicineRequests.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">No medicine requests recorded</p>
+                    ) : (
+                      recordsData.medicineRequests.map((req) => (
+                        <div key={req.id} className="p-3 rounded-lg border bg-muted/30">
+                          <p className="font-semibold mb-2">Medicine: {req.medicineName}</p>
+                          <ul className="space-y-1 text-sm text-muted-foreground ml-4">
+                            <li>• Requester: {req.requester}</li>
+                            <li>• Quantity: {req.quantity}</li>
+                            <li>• Urgency: {req.urgency}</li>
+                            <li>• Status: {req.status}</li>
+                            {req.approvedBy && <li>• Approved By: {req.approvedBy}</li>}
+                            {req.notes && <li>• Notes: {req.notes}</li>}
+                            <li>• Updated: {new Date(req.updatedAt).toLocaleDateString()}</li>
+                          </ul>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <div className="flex justify-end pt-4 border-t">
+                <Button variant="outline" onClick={() => setIsRecordsModalOpen(false)}>
                   Close
                 </Button>
               </div>

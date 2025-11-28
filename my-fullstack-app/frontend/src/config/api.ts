@@ -49,6 +49,18 @@ export const API_ENDPOINTS = {
         BASE: `${API_BASE_URL}/api/medicine`,
         BY_ID: (id: string) => `${API_BASE_URL}/api/medicine/${id}`,
     },
+
+    // Report endpoints
+    REPORTS: {
+        COMPREHENSIVE: `${API_BASE_URL}/api/reports/comprehensive`,
+    },
+
+    // Policy endpoints
+    POLICIES: {
+        BASE: `${API_BASE_URL}/api/policies`,
+        BY_ROLE: (role: string) => `${API_BASE_URL}/api/policies/${role}`,
+        BY_ID: (id: string) => `${API_BASE_URL}/api/policies/${id}`,
+    },
 };
 
 export default API_BASE_URL;

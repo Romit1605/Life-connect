@@ -232,3 +232,30 @@ export const medicineAPI = {
     update: (id: string, data: any) => apiCall(API_ENDPOINTS.MEDICINE.BY_ID(id), { method: "PUT", body: JSON.stringify(data) }),
     delete: (id: string) => apiCall(API_ENDPOINTS.MEDICINE.BY_ID(id), { method: "DELETE" }),
 };
+
+export const reportAPI = {
+    generateComprehensive: (filters?: { startDate?: string; endDate?: string }) => {
+        const params = new URLSearchParams();
+        if (filters?.startDate) params.append('startDate', filters.startDate);
+        if (filters?.endDate) params.append('endDate', filters.endDate);
+
+        const url = filters ? `${API_ENDPOINTS.REPORTS.COMPREHENSIVE}?${params}` : API_ENDPOINTS.REPORTS.COMPREHENSIVE;
+        return apiCall(url);
+    },
+};
+
+export const policyAPI = {
+    getAll: () => apiCall(API_ENDPOINTS.POLICIES.BASE),
+    getByRole: (role: string) => apiCall(API_ENDPOINTS.POLICIES.BY_ROLE(role)),
+    create: (policyData: any) => apiCall(API_ENDPOINTS.POLICIES.BASE, {
+        method: 'POST',
+        body: JSON.stringify(policyData),
+    }),
+    update: (id: string, policyData: any) => apiCall(API_ENDPOINTS.POLICIES.BY_ID(id), {
+        method: 'PUT',
+        body: JSON.stringify(policyData),
+    }),
+    delete: (id: string) => apiCall(API_ENDPOINTS.POLICIES.BY_ID(id), {
+        method: 'DELETE',
+    }),
+};
