@@ -8,7 +8,7 @@ import Index from "@/components/pages/Index.tsx";
 import Login from "@/components/pages/Login.tsx";
 import Register from "@/components/pages/Register.tsx";
 import RoleSelection from "@/components/pages/RoleSelection.tsx";
-import Upload from "@/components/pages/Upload.tsx";
+import Upload from "@/components/pages/Upload.tsx"; 
 import UploadMedicine from "@/components/pages/UploadMedicine";
 import Request from "@/components/pages/Request.tsx";
 import Camps from "@/components/pages/Camps.tsx";
