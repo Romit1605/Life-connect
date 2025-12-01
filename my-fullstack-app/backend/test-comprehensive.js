@@ -91,7 +91,7 @@ function assertTrue(condition, message) {
 // Tests
 async function runTests() {
     console.log('='.repeat(60));
-    console.log('🚀 Starting Comprehensive Backend Tests');
+    console.log('Starting Comprehensive Backend Tests');
     console.log('='.repeat(60));
 
     // Test 1: Server Health Check
